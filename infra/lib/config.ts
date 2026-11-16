@@ -10,6 +10,15 @@ export const FCAR = {
   cdkQualifier: 'hnb659fds',
 } as const;
 
+/**
+ * Prefixos aceitos no claim `sub` do OIDC do GitHub. O repositório usa o subject imutável
+ * (`repo:<owner>@<ownerId>/<repo>@<repoId>`); o formato antigo fica aceito por compatibilidade.
+ */
+export const GITHUB_OIDC_SUB_PREFIXES = [
+  'repo:fpoiato@28718134/fcar@1459367548',
+  `repo:${FCAR.repo}`,
+] as const;
+
 export const env = { account: FCAR.account, region: FCAR.region };
 
 /** Hosts do projeto. Todos cobertos pelo certificado `fcar.fpoiato.com` + `*.fcar.fpoiato.com`. */
