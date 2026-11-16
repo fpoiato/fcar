@@ -11,6 +11,7 @@
   <router-outlet />
 </main>
 <footer class="footer">
+  <span data-testid="copyright">© {{ year }} fcar</span>
   <span>v{{ config.appVersion }}</span>
   @if (config.color !== 'local') {
     <span class="color" [attr.data-color]="config.color">{{ config.color }}</span>

@@ -10,6 +10,11 @@ test.describe('navegação', () => {
     await expect(page.getByTestId('locale-sample')).toContainText('49.900,00');
   });
 
+  test('rodapé exibe © ano atual e nome da loja', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('contentinfo')).toContainText(`© ${new Date().getFullYear()} fcar`);
+  });
+
   test('menu leva à área do cliente', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('link', { name: 'Minha conta' }).click();
