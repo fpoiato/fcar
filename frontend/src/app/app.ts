@@ -11,4 +11,5 @@ import { APP_CONFIG } from './core/config/app-config';
 })
 export class App {
   protected readonly config = inject(APP_CONFIG);
+  protected readonly year = new Date().getFullYear();
 }
