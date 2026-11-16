@@ -38,3 +38,9 @@ Definidos em `lib/config.ts` (`HOSTS`), todos cobertos pelo certificado:
 | `media.fcar.`                                      | fotos das unidades                          |
 
 Registros DNS são criados pelas stacks que os usam (#5, #6), apenas sob `*.fcar.fpoiato.com`.
+
+## Cor ativa e deploy manual do backend
+
+A cor ativa fica no SSM em `/fcar/active-color` (criado manualmente uma vez, valor inicial `blue`).
+O CDK a recebe por contexto. O script `npm run deploy:backend -w infra` lê o parâmetro e faz o deploy.
+Ver [ADR 0001](../docs/adr/0001-blue-green-backend.md).

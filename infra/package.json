@@ -7,7 +7,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "synth": "cdk synth --quiet",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "deploy:backend": "cdk deploy fcar-backend -c fcar:activeColor=$(aws ssm get-parameter --name /fcar/active-color --query Parameter.Value --output text)"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.277.0",
