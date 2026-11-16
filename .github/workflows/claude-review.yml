@@ -46,6 +46,12 @@ jobs:
             const reviews = await github.paginate(github.rest.pulls.listReviews, { ...context.repo, pull_number: pr });
             const rejected = reviews.filter((r) => r.user?.login === 'github-actions[bot]' && r.state === 'CHANGES_REQUESTED').length;
             core.setOutput('cycle', rejected + 1);
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: Number('${{ inputs.issue }}'),
+              body: `🔍 Revisão do PR #${pr} iniciada (ciclo ${rejected + 1}/${process.env.MAX_CYCLES}). Acompanhe: ${run}`,
+            });
             core.setOutput('sha', data.head.sha);
 
             // Espera o CI do commit (até 25 min) para revisar com o resultado em mãos.
@@ -115,6 +121,9 @@ jobs:
               core.warning(`decision.json ausente ou inválido: ${e.message}`);
               d = null;
             }
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const notify = (body) =>
+              github.rest.issues.createComment({ ...context.repo, issue_number: issue, body: `${body} Run: ${run}` });
             const setStatus = async (label) => {
               const { data } = await github.rest.issues.get({ ...context.repo, issue_number: issue });
               for (const l of data.labels.map((x) => x.name).filter((n) => n.startsWith('status:'))) {
@@ -129,6 +138,7 @@ jobs:
                 ...context.repo, issue_number: pr,
                 body: '⚠️ O revisor automático não produziu uma decisão. Revisão humana necessária.',
               });
+              await notify(`🛑 PR #${pr} precisa de atenção humana: o revisor não produziu uma decisão.`);
               core.setOutput('next', 'needs-human');
               return;
             }
@@ -140,6 +150,7 @@ jobs:
                 body: `${header}${d.summary}\n\n✅ Aprovado. O merge é humano.`,
               });
               await setStatus('status:review');
+              await notify(`✅ PR #${pr} aprovado pelo revisor. Aguardando merge humano.`);
               core.setOutput('next', 'human-merge');
               return;
             }
@@ -152,6 +163,11 @@ jobs:
                 : '🔁 Devolvido ao executor para rework.'}`,
             });
             await setStatus(exhausted ? 'status:needs-human' : 'status:rework');
+            await notify(
+              exhausted
+                ? `🛑 PR #${pr} precisa de atenção humana: limite de ${max} ciclos de revisão atingido.`
+                : `🔁 PR #${pr} devolvido para rework (ciclo ${cycle}/${max}).`,
+            );
             core.setOutput('next', exhausted ? 'needs-human' : 'rework');
 
   rework:
