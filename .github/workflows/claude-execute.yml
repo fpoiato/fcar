@@ -94,6 +94,8 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Executor e revisor se disparam via workflow_dispatch com o GITHUB_TOKEN (ator github-actions).
+          allowed_bots: github-actions
           prompt: ${{ steps.prompt.outputs.text }}
           claude_args: >-
             --max-turns 150
