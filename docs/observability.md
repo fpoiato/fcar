@@ -28,15 +28,16 @@ frontend → POST /client-errors (#10)┘                                       
   primeiros frames do stack normalizados (sem ids, números, hashes de bundle, linha:coluna).
   Sem stack, usa a mensagem normalizada.
 - **Primeira ocorrência:** cria a issue com labels `type:error-backend|frontend`, `area:*` e
-  `status:triage`, com análise do **Amazon Nova Micro** (`us.amazon.nova-micro-v1:0`). Se o modelo
-  falhar ou responder fora do formato, a issue sai com um resumo padrão.
+  `status:triage`, e título `[erro <origem>] <erro> em <função>`. O corpo traz a seção `## Análise` com o marcador
+  `<!-- fcar-analysis:pending -->`; a análise em si é feita depois pelo **Claude no GitHub Actions**
+  (workflow `claude-analyze-error`), que substitui o marcador.
 - **Recorrência:** acumula; no máximo **1 comentário por hora** com a contagem.
 - **Issue fechada e erro voltou:** cria uma issue nova referenciando a anterior.
 - **Limite global:** 10 issues novas por hora (`MAX_ISSUES_PER_HOUR`).
 - **Concorrência:** trava condicional no DynamoDB (`ERRFP#<fp>`); só um worker cria a issue.
 - **Conteúdo não confiável:** a evidência é tratada como dado. Menções `@`, cercas de código e
-  palavras de fechamento (`closes #N`) são neutralizadas, e o prompt do modelo deixa claro que
-  instruções dentro da evidência devem ser ignoradas.
+  palavras de fechamento (`closes #N`) são neutralizadas, e o Claude é instruído a
+  ignorar instruções dentro da evidência.
 - **Token:** fine-grained, só `fpoiato/fcar`, Issues read/write, em Secrets Manager
   `fcar/github-issues-token`. A issue entra no board pela sincronização de labels (#14).
 
@@ -46,7 +47,7 @@ frontend → POST /client-errors (#10)┘                                       
 | ------------------------------ | ---------------------------------------------------------- |
 | `fcar-central-errors-high`     | > 20 erros em 5 min no `/fcar/errors`                      |
 | `fcar-error-forwarder-failing` | o forwarder falhou (erros podem não chegar ao log central) |
-| `fcar-error-to-issue-failing`  | erros não estão virando issues (token, Bedrock ou GitHub)  |
+| `fcar-error-to-issue-failing`  | erros não estão virando issues (token ou GitHub)           |
 
 O forwarder e o `error-to-issue` **não** alimentam o `/fcar/errors` (evita loop); as falhas deles
 ficam nos logs próprios e nos alarmes.

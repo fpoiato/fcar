@@ -1,7 +1,6 @@
 import { Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import type * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as destinations from 'aws-cdk-lib/aws-logs-destinations';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
@@ -11,7 +10,6 @@ import { FcarFunction } from './fcar-function.js';
 
 export const CENTRAL_ERRORS_LOG_GROUP = '/fcar/errors';
 export const GITHUB_TOKEN_SECRET = 'fcar/github-issues-token';
-export const ISSUE_MODEL_ID = 'us.amazon.nova-micro-v1:0';
 
 export interface ErrorPipelineProps {
   /** Tabela onde ficam fingerprints e o limite de issues por hora. */
@@ -87,15 +85,6 @@ export class ErrorPipeline extends Construct {
     secretsmanager.Secret.fromSecretNameV2(this, 'GithubToken', GITHUB_TOKEN_SECRET).grantRead(
       this.errorToIssue.fn,
     );
-    this.errorToIssue.fn.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ['bedrock:InvokeModel'],
-        resources: [
-          `arn:aws:bedrock:${stack.region}:${stack.account}:inference-profile/${ISSUE_MODEL_ID}`,
-          'arn:aws:bedrock:*::foundation-model/amazon.nova-micro-v1:0',
-        ],
-      }),
-    );
     new logs.SubscriptionFilter(this, 'CentralToIssue', {
       logGroup: this.logGroup,
       destination: new destinations.LambdaDestination(this.errorToIssue.fn),
@@ -112,7 +101,7 @@ export class ErrorPipeline extends Construct {
     });
     new cloudwatch.Alarm(this, 'ErrorToIssueFailing', {
       alarmName: 'fcar-error-to-issue-failing',
-      alarmDescription: 'Erros não estão virando issues no GitHub (token, Bedrock ou GitHub fora)',
+      alarmDescription: 'Erros não estão virando issues no GitHub (token ou GitHub fora)',
       metric: issueFailures.metric({ period: Duration.minutes(5), statistic: 'Sum' }),
       threshold: 1,
       evaluationPeriods: 1,

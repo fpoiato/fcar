@@ -72,7 +72,7 @@ describe('ErrorPipeline', () => {
     expect(subscribedGroups().some((s) => s.includes('ErrorToIssue'))).toBe(false);
   });
 
-  it('error-to-issue: Nova Micro, secret do token e limites', () => {
+  it('error-to-issue: secret do token e limites', () => {
     t.hasResourceProperties('AWS::Lambda::Function', {
       FunctionName: 'fcar-error-to-issue',
       Environment: {
@@ -84,7 +84,7 @@ describe('ErrorPipeline', () => {
       },
     });
     const policies = JSON.stringify(t.findResources('AWS::IAM::Policy'));
-    expect(policies).toContain('inference-profile/us.amazon.nova-micro-v1:0');
+    expect(policies).not.toContain('bedrock');
     expect(policies).toContain('secretsmanager:GetSecretValue');
   });
 

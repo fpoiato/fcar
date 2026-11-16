@@ -14,18 +14,6 @@ vi.mock('../../lib/errors/store.js', () => ({
 vi.mock('../../lib/errors/github.js', () => ({
   github: { createIssue: vi.fn(), getIssue: vi.fn(), comment: vi.fn() },
 }));
-vi.mock('../../lib/errors/analyze.js', () => ({
-  analyze: vi.fn(async () => ({
-    ai: true,
-    analysis: {
-      title: 'Falha X',
-      summary: 's',
-      probableCause: 'c',
-      suggestedSteps: [],
-      suspectFiles: [],
-    },
-  })),
-}));
 
 const store = await import('../../lib/errors/store.js');
 const { github } = await import('../../lib/errors/github.js');
@@ -69,8 +57,8 @@ describe('processFingerprint', () => {
     m(store.recordOccurrences).mockResolvedValue(rec());
     expect(await processFingerprint('f', [err()], now)).toBe('created');
     expect(github.createIssue).toHaveBeenCalledWith(
-      '[erro backend] Falha X',
-      expect.stringContaining('fcar-fingerprint:f'),
+      '[erro backend] TypeError em fcar-health',
+      expect.stringContaining('<!-- fcar-analysis:pending -->'),
       expect.arrayContaining(['status:triage', 'type:error-backend']),
     );
     expect(store.linkIssue).toHaveBeenCalledWith('f', 42, now.toISOString());
