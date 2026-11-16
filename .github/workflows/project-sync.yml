@@ -5,13 +5,21 @@ on:
   issues:
     types: [opened, reopened, labeled, unlabeled, closed]
   workflow_dispatch: # ressincroniza todas as issues
+  # Chamado pelo executor/revisor depois de mudarem labels com o GITHUB_TOKEN
+  # (essas mudanças não disparam o evento `issues`).
+  workflow_call:
+    inputs:
+      issue:
+        description: Número da issue a sincronizar
+        type: number
+        required: true
 
 permissions:
   contents: read
   issues: write
 
 concurrency:
-  group: project-sync-${{ github.event.issue.number || 'all' }}
+  group: project-sync-${{ inputs.issue || github.event.issue.number || 'all' }}
   cancel-in-progress: false
 
 jobs:
@@ -33,7 +41,10 @@ jobs:
             );
             const repo = context.repo;
             let issues;
-            if (context.eventName === 'workflow_dispatch') {
+            const single = Number('${{ inputs.issue || 0 }}');
+            if (single) {
+              issues = [(await github.rest.issues.get({ ...repo, issue_number: single })).data];
+            } else if (context.eventName === 'workflow_dispatch') {
               issues = (await github.paginate(github.rest.issues.listForRepo, { ...repo, state: 'all', per_page: 100 }))
                 .filter((i) => !i.pull_request);
             } else {
@@ -43,12 +54,12 @@ jobs:
             const out = [];
             for (const issue of issues) {
               let labels = issue.labels.map((l) => l.name);
-              const def = context.payload.action === 'opened' ? defaultStatusLabel(issue) : null;
+              const def = !single && context.payload.action === 'opened' ? defaultStatusLabel(issue) : null;
               if (def) {
                 await github.rest.issues.addLabels({ ...repo, issue_number: issue.number, labels: [def] });
                 labels.push(def);
               }
-              const justAdded = context.payload.action === 'labeled' ? context.payload.label?.name : undefined;
+              const justAdded = !single && context.payload.action === 'labeled' ? context.payload.label?.name : undefined;
               for (const name of extraStatusLabels(labels, justAdded)) {
                 await github.rest.issues.removeLabel({ ...repo, issue_number: issue.number, name }).catch(() => undefined);
                 labels = labels.filter((l) => l !== name);
