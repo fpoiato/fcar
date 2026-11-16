@@ -22,6 +22,8 @@ describe('GithubOidcStack', () => {
               StringEquals: { 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com' },
               StringLike: {
                 'token.actions.githubusercontent.com:sub': [
+                  'repo:fpoiato@28718134/fcar@1459367548:environment:prod-deploy',
+                  'repo:fpoiato@28718134/fcar@1459367548:environment:prod-swap',
                   'repo:fpoiato/fcar:environment:prod-deploy',
                   'repo:fpoiato/fcar:environment:prod-swap',
                 ],
@@ -40,9 +42,13 @@ describe('GithubOidcStack', () => {
         Statement: Match.arrayWith([
           Match.objectLike({
             Condition: {
-              StringEquals: Match.objectLike({
-                'token.actions.githubusercontent.com:sub': 'repo:fpoiato/fcar:pull_request',
-              }),
+              StringEquals: { 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com' },
+              StringLike: {
+                'token.actions.githubusercontent.com:sub': [
+                  'repo:fpoiato@28718134/fcar@1459367548:pull_request',
+                  'repo:fpoiato/fcar:pull_request',
+                ],
+              },
             },
           }),
         ]),

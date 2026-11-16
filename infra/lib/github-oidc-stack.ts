@@ -1,7 +1,7 @@
 import { CfnOutput, Duration, Stack, type StackProps } from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import type { Construct } from 'constructs';
-import { FCAR } from './config.js';
+import { FCAR, GITHUB_OIDC_SUB_PREFIXES } from './config.js';
 
 /**
  * Roles assumidas pelo GitHub Actions via OIDC (sem access keys).
@@ -28,10 +28,10 @@ export class GithubOidcStack extends Stack {
       assumedBy: new iam.WebIdentityPrincipal(provider.openIdConnectProviderArn, {
         StringEquals: audience,
         StringLike: {
-          'token.actions.githubusercontent.com:sub': [
-            `repo:${FCAR.repo}:environment:prod-deploy`,
-            `repo:${FCAR.repo}:environment:prod-swap`,
-          ],
+          'token.actions.githubusercontent.com:sub': GITHUB_OIDC_SUB_PREFIXES.flatMap((p) => [
+            `${p}:environment:prod-deploy`,
+            `${p}:environment:prod-swap`,
+          ]),
         },
       }),
       description: 'GitHub Actions (fpoiato/fcar) - deploy e swap blue/green',
@@ -72,9 +72,11 @@ export class GithubOidcStack extends Stack {
       roleName: 'fcar-gha-readonly',
       maxSessionDuration: Duration.hours(1),
       assumedBy: new iam.WebIdentityPrincipal(provider.openIdConnectProviderArn, {
-        StringEquals: {
-          ...audience,
-          'token.actions.githubusercontent.com:sub': `repo:${FCAR.repo}:pull_request`,
+        StringEquals: audience,
+        StringLike: {
+          'token.actions.githubusercontent.com:sub': GITHUB_OIDC_SUB_PREFIXES.map(
+            (p) => `${p}:pull_request`,
+          ),
         },
       }),
       description: 'GitHub Actions (fpoiato/fcar) - leitura para cdk diff em PRs',
