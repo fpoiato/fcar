@@ -15,3 +15,5 @@ playwright-report/
 *.pem
 *.key
 .aws/
+frontend/test-results/
+frontend/playwright-report/
