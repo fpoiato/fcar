@@ -41,6 +41,7 @@ describe('BackendStack', () => {
   it('toda Lambda tem log group próprio e aliases blue/green', () => {
     const fns = FcarFunction.all(app);
     expect(fns.map((f) => f.functionName).sort()).toEqual([
+      'fcar-client-errors',
       'fcar-error-forwarder',
       'fcar-error-to-issue',
       'fcar-health',
@@ -54,12 +55,12 @@ describe('BackendStack', () => {
     t.resourcePropertiesCountIs(
       'AWS::Lambda::Alias',
       { Name: 'blue', FunctionVersion: '$LATEST' },
-      4,
+      5,
     );
     t.resourcePropertiesCountIs(
       'AWS::Lambda::Alias',
       { Name: 'green', FunctionVersion: '$LATEST' },
-      4,
+      5,
     );
   });
 
@@ -129,5 +130,53 @@ describe('BackendStack', () => {
 
   it('stack tem nome estável', () => {
     expect(stack.stackName).toBe('backend');
+  });
+});
+
+describe('POST /client-errors', () => {
+  it('rota pública com throttling próprio nas duas stages', () => {
+    t.hasResourceProperties('AWS::ApiGateway::Method', {
+      HttpMethod: 'POST',
+      AuthorizationType: 'NONE',
+    });
+    for (const color of ['blue', 'green']) {
+      t.hasResourceProperties('AWS::ApiGateway::Stage', {
+        StageName: color,
+        MethodSettings: Match.arrayWith([
+          Match.objectLike({
+            HttpMethod: 'POST',
+            ResourcePath: '/~1client-errors',
+            ThrottlingRateLimit: 20,
+          }),
+        ]),
+      });
+    }
+  });
+
+  it('WAF com limite por IP associado às duas stages', () => {
+    t.hasResourceProperties('AWS::WAFv2::WebACL', {
+      Scope: 'REGIONAL',
+      Rules: [
+        Match.objectLike({
+          Name: 'client-errors-rate-per-ip',
+          Action: { Block: {} },
+          Statement: {
+            RateBasedStatement: Match.objectLike({ Limit: 100, AggregateKeyType: 'IP' }),
+          },
+        }),
+      ],
+    });
+    t.resourceCountIs('AWS::WAFv2::WebACLAssociation', 2);
+  });
+
+  it('todas as Lambdas recebem a lista de origens permitidas', () => {
+    t.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: 'fcar-client-errors',
+      Environment: {
+        Variables: Match.objectLike({
+          ALLOWED_ORIGINS: Match.stringLikeRegexp('https://fcar.fpoiato.com'),
+        }),
+      },
+    });
   });
 });

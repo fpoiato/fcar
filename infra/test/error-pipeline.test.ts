@@ -41,7 +41,7 @@ describe('ErrorPipeline', () => {
 
   it('assina todas as Lambdas do projeto, exceto o próprio forwarder', () => {
     const groups = subscribedGroups();
-    expect(groups.length).toBe(2); // health e ws-connection (o forwarder e o error-to-issue não)
+    expect(groups.length).toBe(3); // health, ws-connection e client-errors (não o forwarder nem o error-to-issue)
     expect(groups.some((s) => s.includes('Forwarder'))).toBe(false);
     for (const r of subs().filter((x) =>
       JSON.stringify(x.Properties.DestinationArn).includes('Forwarder'),
