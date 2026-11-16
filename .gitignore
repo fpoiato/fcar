@@ -18,3 +18,4 @@ playwright-report/
 frontend/test-results/
 frontend/playwright-report/
 .fcar-review/
+.fcar-analysis/
