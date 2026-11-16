@@ -1,8 +1,10 @@
 import { App, Tags } from 'aws-cdk-lib';
+import { env } from '../lib/config.js';
+import { GithubOidcStack } from '../lib/github-oidc-stack.js';
 
 const app = new App();
-
 Tags.of(app).add('project', 'fcar');
 
-// As stacks são adicionadas pelas issues da Fase 0 (#3, #4, #5, #6, #8, #9, #10).
+new GithubOidcStack(app, 'fcar-github-oidc', { env });
+
 app.synth();

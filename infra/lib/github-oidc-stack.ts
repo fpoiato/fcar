@@ -1,0 +1,105 @@
+import { CfnOutput, Duration, Stack, type StackProps } from 'aws-cdk-lib';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import type { Construct } from 'constructs';
+import { FCAR } from './config.js';
+
+/**
+ * Roles assumidas pelo GitHub Actions via OIDC (sem access keys).
+ * O OIDC provider do GitHub já existe na conta e é apenas referenciado.
+ */
+export class GithubOidcStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
+    super(scope, id, props);
+
+    const provider = iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(
+      this,
+      'GithubProvider',
+      FCAR.githubOidcProviderArn,
+    );
+
+    const audience = { 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com' };
+    const cdkRole = (kind: string) =>
+      `arn:aws:iam::${FCAR.account}:role/cdk-${FCAR.cdkQualifier}-${kind}-role-${FCAR.account}-${FCAR.region}`;
+
+    // Deploy e swap: somente a partir dos environments protegidos do repo.
+    const deployRole = new iam.Role(this, 'DeployRole', {
+      roleName: 'fcar-gha-deploy',
+      maxSessionDuration: Duration.hours(1),
+      assumedBy: new iam.WebIdentityPrincipal(provider.openIdConnectProviderArn, {
+        StringEquals: audience,
+        StringLike: {
+          'token.actions.githubusercontent.com:sub': [
+            `repo:${FCAR.repo}:environment:prod-deploy`,
+            `repo:${FCAR.repo}:environment:prod-swap`,
+          ],
+        },
+      }),
+      description: 'GitHub Actions (fpoiato/fcar) - deploy e swap blue/green',
+    });
+
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'AssumeCdkRoles',
+        actions: ['sts:AssumeRole'],
+        resources: ['deploy', 'file-publishing', 'image-publishing', 'lookup'].map(cdkRole),
+      }),
+    );
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'FrontendSync',
+        actions: ['s3:ListBucket', 's3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+        resources: ['arn:aws:s3:::fcar-web-*', 'arn:aws:s3:::fcar-web-*/*'],
+      }),
+    );
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'CloudFrontInvalidation',
+        actions: ['cloudfront:CreateInvalidation', 'cloudfront:GetInvalidation'],
+        // Restringido às distribuições do projeto na issue #5 (ARNs conhecidos após a criação).
+        resources: [`arn:aws:cloudfront::${FCAR.account}:distribution/*`],
+      }),
+    );
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'ActiveColorParameter',
+        actions: ['ssm:GetParameter', 'ssm:PutParameter'],
+        resources: [`arn:aws:ssm:${FCAR.region}:${FCAR.account}:parameter/fcar/*`],
+      }),
+    );
+
+    // Leitura para PRs (cdk diff): não pode alterar nada.
+    const readOnlyRole = new iam.Role(this, 'ReadOnlyRole', {
+      roleName: 'fcar-gha-readonly',
+      maxSessionDuration: Duration.hours(1),
+      assumedBy: new iam.WebIdentityPrincipal(provider.openIdConnectProviderArn, {
+        StringEquals: {
+          ...audience,
+          'token.actions.githubusercontent.com:sub': `repo:${FCAR.repo}:pull_request`,
+        },
+      }),
+      description: 'GitHub Actions (fpoiato/fcar) - leitura para cdk diff em PRs',
+    });
+    readOnlyRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'AssumeCdkLookup',
+        actions: ['sts:AssumeRole'],
+        resources: [cdkRole('lookup')],
+      }),
+    );
+    readOnlyRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'ReadStacks',
+        actions: [
+          'cloudformation:DescribeStacks',
+          'cloudformation:GetTemplate',
+          'cloudformation:ListStacks',
+          'ssm:GetParameter',
+        ],
+        resources: ['*'],
+      }),
+    );
+
+    new CfnOutput(this, 'DeployRoleArn', { value: deployRole.roleArn });
+    new CfnOutput(this, 'ReadOnlyRoleArn', { value: readOnlyRole.roleArn });
+  }
+}
