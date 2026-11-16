@@ -2,7 +2,6 @@ import { Logger, redact, withHandler } from '@fcar/shared';
 import type { CloudWatchLogsEvent, Context } from 'aws-lambda';
 import type { CentralError } from '../../lib/central-error.js';
 import { decodeLogsEvent } from '../../lib/cloudwatch-logs.js';
-import { analyze } from '../../lib/errors/analyze.js';
 import { fingerprint } from '../../lib/errors/fingerprint.js';
 import { github } from '../../lib/errors/github.js';
 import {
@@ -23,7 +22,7 @@ import {
 
 /**
  * Assina o `/fcar/errors`. Para cada assinatura de erro (fingerprint):
- * - primeira vez: cria uma issue em Triage com análise do Amazon Nova (limite global por hora)
+ * - primeira vez: cria uma issue em Triage com marcador de análise pendente (o Claude no GitHub Actions analisa; limite global por hora)
  * - recorrência: acumula e comenta no máximo uma vez por intervalo
  * - issue fechada e o erro voltou: cria nova issue referenciando a anterior
  * Não é assinado pelo pipeline de erros (evita loop); falhas ficam no log próprio + alarme.
@@ -55,14 +54,13 @@ async function createIssue(
     logger.warn('limite de issues por hora atingido', { fingerprint: fp });
     return 'rate-limited';
   }
-  const { analysis, ai } = await analyze(e);
   const issue = await github.createIssue(
-    issueTitle(e, analysis),
-    issueBody(e, analysis, { fingerprint: fp, ai, previousIssue }),
+    issueTitle(e),
+    issueBody(e, { fingerprint: fp, previousIssue }),
     issueLabels(e),
   );
   await linkIssue(fp, issue.number, now.toISOString());
-  logger.info('issue criada', { fingerprint: fp, issue: issue.number, ai });
+  logger.info('issue criada', { fingerprint: fp, issue: issue.number });
   return previousIssue ? 'reopened-as-new' : 'created';
 }
 

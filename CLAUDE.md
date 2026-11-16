@@ -12,7 +12,7 @@ Vitrine virtual de uma loja de carros em **fcar.fpoiato.com**. Repositório **p�
 - **Pagamentos:** Asaas (PIX e cartão). Dados de cartão nunca passam pelo nosso backend.
 - **IaC:** AWS CDK em TypeScript (`infra/`), conta `986873053420`, região `us-east-1`.
 - **Observabilidade:** logs estruturados JSON por Lambda; **todo erro** de qualquer Lambda e do frontend vai para o log group central
-  `/fcar/errors`, que gera issues no GitHub (com análise do Amazon Nova) na coluna **Triage**.
+  `/fcar/errors`, que gera issues no GitHub (analisadas pelo Claude no GitHub Actions) na coluna **Triage**.
 
 ## Estrutura
 
