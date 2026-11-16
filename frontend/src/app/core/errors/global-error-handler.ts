@@ -43,6 +43,6 @@ export class GlobalErrorHandler implements ErrorHandler {
   handleError(error: unknown): void {
     this.reporter.report(toReport(error));
     // Mantém o comportamento padrão de mostrar no console, sem passar pela captura de console.
-    this.original('[fcar]', error);
+    this.original('[app]', error);
   }
 }

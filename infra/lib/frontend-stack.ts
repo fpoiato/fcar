@@ -7,13 +7,13 @@ import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import type { Construct } from 'constructs';
-import { HOSTS } from './config.js';
-import { COLORS, type Color } from './constructs/fcar-function.js';
+import { HOSTS, PROJECT, name, ns } from './config.js';
+import { COLORS, type Color } from './constructs/app-function.js';
 
 export interface FrontendStackProps extends StackProps {
   zone: route53.IHostedZone;
   certificate: acm.ICertificate;
-  /** Cor que atende `fcar.fpoiato.com`. Vem de /fcar/active-color via contexto. */
+  /** Cor que atende o domínio principal. Vem de /<slug>/active-color via contexto. */
   activeColor: Color;
 }
 
@@ -35,8 +35,8 @@ export const CONTENT_SECURITY_POLICY = [
 
 /**
  * Frontend blue/green: um bucket e uma distribuição por cor.
- * - `blue.fcar` / `green.fcar` ficam sempre na sua distribuição
- * - `fcar.fpoiato.com` fica na distribuição da cor ativa
+ * - `blue.<domínio>` / `green.<domínio>` ficam sempre na sua distribuição
+ * - o domínio principal fica na distribuição da cor ativa
  * O CloudFront não permite o mesmo domínio em duas distribuições; o swap move o domínio com
  * `cloudfront associate-alias` (atômico) e depois o CDK reconcilia o template (ver ADR 0002).
  */
@@ -48,7 +48,7 @@ export class FrontendStack extends Stack {
     super(scope, id, props);
 
     const headers = new cloudfront.ResponseHeadersPolicy(this, 'SecurityHeaders', {
-      responseHeadersPolicyName: 'fcar-web-security',
+      responseHeadersPolicyName: name('web-security'),
       securityHeadersBehavior: {
         contentSecurityPolicy: { contentSecurityPolicy: CONTENT_SECURITY_POLICY, override: true },
         strictTransportSecurity: {
@@ -68,7 +68,7 @@ export class FrontendStack extends Stack {
 
     for (const color of COLORS) {
       const bucket = new s3.Bucket(this, `Bucket-${color}`, {
-        bucketName: `fcar-web-${color}`,
+        bucketName: name(`web-${color}`),
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
         encryption: s3.BucketEncryption.S3_MANAGED,
         enforceSSL: true,
@@ -79,7 +79,7 @@ export class FrontendStack extends Stack {
 
       const isActive = color === props.activeColor;
       const distribution = new cloudfront.Distribution(this, `Distribution-${color}`, {
-        comment: `fcar web ${color}`,
+        comment: `${PROJECT.slug} web ${color}`,
         domainNames: isActive ? [HOSTS.web, COLOR_HOST[color]] : [COLOR_HOST[color]],
         certificate: props.certificate,
         minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
@@ -106,11 +106,11 @@ export class FrontendStack extends Stack {
       if (isActive) this.alias(props.zone, 'Web-active', HOSTS.web, distribution);
 
       new ssm.StringParameter(this, `BucketParam-${color}`, {
-        parameterName: `/fcar/web/${color}/bucket`,
+        parameterName: ns(`web/${color}/bucket`),
         stringValue: bucket.bucketName,
       });
       new ssm.StringParameter(this, `DistributionParam-${color}`, {
-        parameterName: `/fcar/web/${color}/distribution-id`,
+        parameterName: ns(`web/${color}/distribution-id`),
         stringValue: distribution.distributionId,
       });
       new CfnOutput(this, `DistributionId-${color}`, { value: distribution.distributionId });

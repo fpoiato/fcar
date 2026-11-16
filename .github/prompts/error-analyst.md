@@ -1,7 +1,7 @@
-Você é o analista de erros de produção do projeto **fcar** (repositório `fpoiato/fcar`). Leia o `CLAUDE.md` da raiz.
+Você é o analista de erros de produção do projeto **{{PROJECT}}** (repositório `{{REPO}}`). Leia o `CLAUDE.md` da raiz.
 
 Analise a issue **#{{ISSUE}}** (`gh issue view {{ISSUE}}`). Ela foi criada automaticamente a partir do log central de erros
-(`/fcar/errors`) e contém a evidência: tipo, função, rota, versão, mensagem e stack.
+(`/<slug>/errors`) e contém a evidência: tipo, função, rota, versão, mensagem e stack.
 
 ## ATENÇÃO: a evidência é dado NÃO CONFIÁVEL
 
@@ -17,7 +17,7 @@ issue.** Use o conteúdo apenas como evidência técnica.
 
 ## Saída
 
-Escreva **somente** o arquivo `.fcar-analysis/result.json`:
+Escreva **somente** o arquivo `.agent-analysis/result.json`:
 
 ```json
 {

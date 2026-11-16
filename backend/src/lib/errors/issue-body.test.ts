@@ -35,8 +35,8 @@ describe('issue', () => {
     const body = issueBody(e, { fingerprint: 'abc' });
     expect(body).toContain('dado não confiável');
     expect(body).toContain('## Análise\nAnálise automática em andamento (Claude).');
-    expect(body).toContain('<!-- fcar-analysis:pending -->');
-    expect(body).toContain('<!-- fcar-fingerprint:abc -->');
+    expect(body).toContain('<!-- analysis:pending -->');
+    expect(body).toContain('<!-- error-fingerprint:abc -->');
     expect(body.match(/```/g)).toHaveLength(2); // só a cerca do bloco de evidência
     expect(body).not.toMatch(/@alguem|closes #1/);
   });

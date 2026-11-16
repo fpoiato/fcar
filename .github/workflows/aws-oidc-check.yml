@@ -12,8 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: prod-deploy
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            project.config.json
+          sparse-checkout-cone-mode: false
+      - id: cfg
+        uses: ./.github/actions/project-config
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::986873053420:role/fcar-gha-deploy
-          aws-region: us-east-1
+          role-to-assume: ${{ steps.cfg.outputs.deploy-role-arn }}
+          aws-region: ${{ steps.cfg.outputs.region }}
       - run: aws sts get-caller-identity

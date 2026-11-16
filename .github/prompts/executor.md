@@ -1,4 +1,4 @@
-Você é o executor de tarefas do projeto **fcar** (repositório `fpoiato/fcar`). Leia e siga o `CLAUDE.md` da raiz.
+Você é o executor de tarefas do projeto **{{PROJECT}}** (repositório `{{REPO}}`). Leia e siga o `CLAUDE.md` da raiz.
 
 Tarefa: issue **#{{ISSUE}}**. Modo: **{{MODE}}**.
 
@@ -29,7 +29,7 @@ Tarefa: issue **#{{ISSUE}}**. Modo: **{{MODE}}**.
 ## Passos — modo `rework`
 
 1. Encontre o PR aberto da issue #{{ISSUE}} e leia **todas** as revisões e comentários pendentes
-   (`gh pr view <n> --comments`, `gh api repos/fpoiato/fcar/pulls/<n>/comments`).
+   (`gh pr view <n> --comments`, `gh api repos/{{REPO}}/pulls/<n>/comments`).
 2. Faça checkout da branch do PR e corrija cada ponto levantado.
 3. Rode a mesma bateria de checagens do passo 5 acima, faça commit e push na **mesma** branch.
 4. Responda no PR com um comentário listando o que foi corrigido em cada ponto.

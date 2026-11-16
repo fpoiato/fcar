@@ -1,7 +1,7 @@
 import { CfnOutput, Duration, Stack, type StackProps } from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import type { Construct } from 'constructs';
-import { FCAR, GITHUB_OIDC_SUB_PREFIXES, WEB_DISTRIBUTION_IDS } from './config.js';
+import { GITHUB_OIDC_SUB_PREFIXES, PROJECT, WEB_DISTRIBUTION_IDS, name } from './config.js';
 
 /**
  * Roles assumidas pelo GitHub Actions via OIDC (sem access keys).
@@ -14,16 +14,16 @@ export class GithubOidcStack extends Stack {
     const provider = iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(
       this,
       'GithubProvider',
-      FCAR.githubOidcProviderArn,
+      PROJECT.githubOidcProviderArn,
     );
 
     const audience = { 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com' };
     const cdkRole = (kind: string) =>
-      `arn:aws:iam::${FCAR.account}:role/cdk-${FCAR.cdkQualifier}-${kind}-role-${FCAR.account}-${FCAR.region}`;
+      `arn:aws:iam::${PROJECT.account}:role/cdk-${PROJECT.cdkQualifier}-${kind}-role-${PROJECT.account}-${PROJECT.region}`;
 
     // Deploy e swap: somente a partir dos environments protegidos do repo.
     const deployRole = new iam.Role(this, 'DeployRole', {
-      roleName: 'fcar-gha-deploy',
+      roleName: name('gha-deploy'),
       maxSessionDuration: Duration.hours(1),
       assumedBy: new iam.WebIdentityPrincipal(provider.openIdConnectProviderArn, {
         StringEquals: audience,
@@ -34,7 +34,7 @@ export class GithubOidcStack extends Stack {
           ]),
         },
       }),
-      description: 'GitHub Actions (fpoiato/fcar) - deploy e swap blue/green',
+      description: `GitHub Actions (${PROJECT.repo}) - deploy e swap blue/green`,
     });
 
     deployRole.addToPolicy(
@@ -48,7 +48,7 @@ export class GithubOidcStack extends Stack {
       new iam.PolicyStatement({
         sid: 'FrontendSync',
         actions: ['s3:ListBucket', 's3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-        resources: ['arn:aws:s3:::fcar-web-*', 'arn:aws:s3:::fcar-web-*/*'],
+        resources: [`arn:aws:s3:::${name('web-*')}`, `arn:aws:s3:::${name('web-*')}/*`],
       }),
     );
     deployRole.addToPolicy(
@@ -56,25 +56,28 @@ export class GithubOidcStack extends Stack {
         sid: 'CloudFrontInvalidation',
         actions: ['cloudfront:CreateInvalidation', 'cloudfront:GetInvalidation'],
         // Restringido às distribuições do projeto na issue #5 (ARNs conhecidos após a criação).
-        resources: [`arn:aws:cloudfront::${FCAR.account}:distribution/*`],
+        resources: [`arn:aws:cloudfront::${PROJECT.account}:distribution/*`],
       }),
     );
     deployRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'ActiveColorParameter',
         actions: ['ssm:GetParameter', 'ssm:PutParameter'],
-        resources: [`arn:aws:ssm:${FCAR.region}:${FCAR.account}:parameter/fcar/*`],
+        resources: [`arn:aws:ssm:${PROJECT.region}:${PROJECT.account}:parameter/${PROJECT.slug}/*`],
       }),
     );
 
     // Deploy na cor inativa e swap (infra/scripts/deploy.sh e swap.sh).
     const arn = (svc: string, res: string) =>
-      `arn:aws:${svc}:${FCAR.region}:${FCAR.account}:${res}`;
+      `arn:aws:${svc}:${PROJECT.region}:${PROJECT.account}:${res}`;
     deployRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'LambdaVersionsAndAliases',
         actions: ['lambda:GetAlias', 'lambda:PublishVersion', 'lambda:UpdateAlias'],
-        resources: [arn('lambda', 'function:fcar-*'), arn('lambda', 'function:fcar-*:*')],
+        resources: [
+          arn('lambda', `function:${name('*')}`),
+          arn('lambda', `function:${name('*')}:*`),
+        ],
       }),
     );
     deployRole.addToPolicy(
@@ -89,9 +92,9 @@ export class GithubOidcStack extends Stack {
         sid: 'ApiGatewayDeploymentsAndMappings',
         actions: ['apigateway:GET', 'apigateway:POST', 'apigateway:PATCH'],
         resources: [
-          `arn:aws:apigateway:${FCAR.region}::/restapis/*`,
-          `arn:aws:apigateway:${FCAR.region}::/apis/*`,
-          `arn:aws:apigateway:${FCAR.region}::/domainnames/*`,
+          `arn:aws:apigateway:${PROJECT.region}::/restapis/*`,
+          `arn:aws:apigateway:${PROJECT.region}::/apis/*`,
+          `arn:aws:apigateway:${PROJECT.region}::/domainnames/*`,
         ],
       }),
     );
@@ -104,8 +107,8 @@ export class GithubOidcStack extends Stack {
           'cloudfront:AssociateAlias',
           'cloudfront:UpdateDistribution',
         ],
-        resources: Object.values(WEB_DISTRIBUTION_IDS).map(
-          (id) => `arn:aws:cloudfront::${FCAR.account}:distribution/${id}`,
+        resources: WEB_DISTRIBUTION_IDS.map(
+          (id) => `arn:aws:cloudfront::${PROJECT.account}:distribution/${id}`,
         ),
       }),
     );
@@ -113,13 +116,13 @@ export class GithubOidcStack extends Stack {
       new iam.PolicyStatement({
         sid: 'SwapDns',
         actions: ['route53:ChangeResourceRecordSets'],
-        resources: [`arn:aws:route53:::hostedzone/${FCAR.hostedZoneId}`],
+        resources: [`arn:aws:route53:::hostedzone/${PROJECT.hostedZoneId}`],
         conditions: {
           'ForAllValues:StringLike': {
             'route53:ChangeResourceRecordSetsNormalizedRecordNames': [
-              FCAR.domain,
-              `*.${FCAR.domain}`,
-              `_${FCAR.domain}`, // TXT de prova de posse exigido pelo associate-alias
+              PROJECT.domain,
+              `*.${PROJECT.domain}`,
+              `_${PROJECT.domain}`, // TXT de prova de posse exigido pelo associate-alias
             ],
           },
         },
@@ -135,7 +138,7 @@ export class GithubOidcStack extends Stack {
 
     // Leitura para PRs (cdk diff): não pode alterar nada.
     const readOnlyRole = new iam.Role(this, 'ReadOnlyRole', {
-      roleName: 'fcar-gha-readonly',
+      roleName: name('gha-readonly'),
       maxSessionDuration: Duration.hours(1),
       assumedBy: new iam.WebIdentityPrincipal(provider.openIdConnectProviderArn, {
         StringEquals: audience,
@@ -145,7 +148,7 @@ export class GithubOidcStack extends Stack {
           ),
         },
       }),
-      description: 'GitHub Actions (fpoiato/fcar) - leitura para cdk diff em PRs',
+      description: `GitHub Actions (${PROJECT.repo}) - leitura para cdk diff em PRs`,
     });
     readOnlyRole.addToPolicy(
       new iam.PolicyStatement({

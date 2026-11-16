@@ -3,7 +3,7 @@ import { Match, Template } from 'aws-cdk-lib/assertions';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import { describe, expect, it } from 'vitest';
-import { env } from '../lib/config.js';
+import { env, name, ns, PROJECT } from '../lib/config.js';
 import { FrontendStack } from '../lib/frontend-stack.js';
 
 function synth(activeColor: 'blue' | 'green') {
@@ -14,12 +14,12 @@ function synth(activeColor: 'blue' | 'green') {
     activeColor,
     zone: route53.HostedZone.fromHostedZoneAttributes(deps, 'Z', {
       hostedZoneId: 'Z1',
-      zoneName: 'fpoiato.com',
+      zoneName: PROJECT.hostedZoneName,
     }),
     certificate: acm.Certificate.fromCertificateArn(
       deps,
       'C',
-      'arn:aws:acm:us-east-1:986873053420:certificate/x',
+      `arn:aws:acm:${PROJECT.region}:${PROJECT.account}:certificate/x`,
     ),
   });
   return Template.fromStack(stack);
@@ -41,7 +41,7 @@ describe('FrontendStack', () => {
   it('dois buckets privados, criptografados e só HTTPS', () => {
     for (const color of ['blue', 'green']) {
       t.hasResourceProperties('AWS::S3::Bucket', {
-        BucketName: `fcar-web-${color}`,
+        BucketName: name(`web-${color}`),
         PublicAccessBlockConfiguration: {
           BlockPublicAcls: true,
           BlockPublicPolicy: true,
@@ -55,12 +55,12 @@ describe('FrontendStack', () => {
 
   it('domínio principal só na distribuição ativa', () => {
     expect(aliasesByComment(t)).toEqual({
-      'fcar web blue': ['blue.fcar.fpoiato.com', 'fcar.fpoiato.com'],
-      'fcar web green': ['green.fcar.fpoiato.com'],
+      [`${PROJECT.slug} web blue`]: [`blue.${PROJECT.domain}`, PROJECT.domain].sort(),
+      [`${PROJECT.slug} web green`]: [`green.${PROJECT.domain}`].sort(),
     });
     expect(aliasesByComment(synth('green'))).toEqual({
-      'fcar web blue': ['blue.fcar.fpoiato.com'],
-      'fcar web green': ['fcar.fpoiato.com', 'green.fcar.fpoiato.com'],
+      [`${PROJECT.slug} web blue`]: [`blue.${PROJECT.domain}`].sort(),
+      [`${PROJECT.slug} web green`]: [PROJECT.domain, `green.${PROJECT.domain}`].sort(),
     });
   });
 
@@ -95,9 +95,9 @@ describe('FrontendStack', () => {
 
   it('publica bucket e distribuição de cada cor no SSM para o deploy', () => {
     for (const color of ['blue', 'green']) {
-      t.hasResourceProperties('AWS::SSM::Parameter', { Name: `/fcar/web/${color}/bucket` });
+      t.hasResourceProperties('AWS::SSM::Parameter', { Name: ns(`web/${color}/bucket`) });
       t.hasResourceProperties('AWS::SSM::Parameter', {
-        Name: `/fcar/web/${color}/distribution-id`,
+        Name: ns(`web/${color}/distribution-id`),
       });
     }
   });

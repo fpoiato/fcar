@@ -1,7 +1,13 @@
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
-import { env } from '../lib/config.js';
+import {
+  env,
+  GITHUB_OIDC_SUB_PREFIXES,
+  name,
+  PROJECT,
+  WEB_DISTRIBUTION_IDS,
+} from '../lib/config.js';
 import { GithubOidcStack } from '../lib/github-oidc-stack.js';
 
 const template = Template.fromStack(new GithubOidcStack(new App(), 'test', { env }));
@@ -14,7 +20,7 @@ describe('GithubOidcStack', () => {
 
   it('role de deploy só confia nos environments protegidos do repo', () => {
     template.hasResourceProperties('AWS::IAM::Role', {
-      RoleName: 'fcar-gha-deploy',
+      RoleName: name('gha-deploy'),
       AssumeRolePolicyDocument: {
         Statement: Match.arrayWith([
           Match.objectLike({
@@ -22,10 +28,10 @@ describe('GithubOidcStack', () => {
               StringEquals: { 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com' },
               StringLike: {
                 'token.actions.githubusercontent.com:sub': [
-                  'repo:fpoiato@28718134/fcar@1459367548:environment:prod-deploy',
-                  'repo:fpoiato@28718134/fcar@1459367548:environment:prod-swap',
-                  'repo:fpoiato/fcar:environment:prod-deploy',
-                  'repo:fpoiato/fcar:environment:prod-swap',
+                  ...GITHUB_OIDC_SUB_PREFIXES.flatMap((p) => [
+                    `${p}:environment:prod-deploy`,
+                    `${p}:environment:prod-swap`,
+                  ]),
                 ],
               },
             },
@@ -37,7 +43,7 @@ describe('GithubOidcStack', () => {
 
   it('role de leitura só confia em pull_request do repo', () => {
     template.hasResourceProperties('AWS::IAM::Role', {
-      RoleName: 'fcar-gha-readonly',
+      RoleName: name('gha-readonly'),
       AssumeRolePolicyDocument: {
         Statement: Match.arrayWith([
           Match.objectLike({
@@ -45,8 +51,7 @@ describe('GithubOidcStack', () => {
               StringEquals: { 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com' },
               StringLike: {
                 'token.actions.githubusercontent.com:sub': [
-                  'repo:fpoiato@28718134/fcar@1459367548:pull_request',
-                  'repo:fpoiato/fcar:pull_request',
+                  ...GITHUB_OIDC_SUB_PREFIXES.map((p) => `${p}:pull_request`),
                 ],
               },
             },
@@ -72,24 +77,24 @@ describe('GithubOidcStack', () => {
 describe('permissões de deploy e swap', () => {
   const policies = JSON.stringify(template.findResources('AWS::IAM::Policy'));
 
-  it('Lambda só nas funções fcar-*', () => {
+  it('Lambda só nas funções do projeto', () => {
     expect(policies).toContain('lambda:PublishVersion');
-    expect(policies).toContain('function:fcar-*');
+    expect(policies).toContain(`function:${name('*')}`);
   });
 
-  it('DNS só na zona e só para nomes sob fcar.fpoiato.com', () => {
+  it('DNS só na zona e só para nomes sob o domínio do projeto', () => {
     template.hasResourceProperties('AWS::IAM::Policy', {
       PolicyDocument: {
         Statement: Match.arrayWith([
           Match.objectLike({
             Sid: 'SwapDns',
-            Resource: 'arn:aws:route53:::hostedzone/Z094351536ZBINA5SU45F',
+            Resource: `arn:aws:route53:::hostedzone/${PROJECT.hostedZoneId}`,
             Condition: {
               'ForAllValues:StringLike': {
                 'route53:ChangeResourceRecordSetsNormalizedRecordNames': [
-                  'fcar.fpoiato.com',
-                  '*.fcar.fpoiato.com',
-                  '_fcar.fpoiato.com',
+                  PROJECT.domain,
+                  `*.${PROJECT.domain}`,
+                  `_${PROJECT.domain}`,
                 ],
               },
             },
@@ -111,8 +116,8 @@ describe('permissões de deploy e swap', () => {
               'cloudfront:UpdateDistribution',
             ],
             Resource: [
-              'arn:aws:cloudfront::986873053420:distribution/E3GC1S5KZJXEU3',
-              'arn:aws:cloudfront::986873053420:distribution/E1ZMKROHY90H2W',
+              `arn:aws:cloudfront::${PROJECT.account}:distribution/${WEB_DISTRIBUTION_IDS[0]}`,
+              `arn:aws:cloudfront::${PROJECT.account}:distribution/${WEB_DISTRIBUTION_IDS[1]}`,
             ],
           }),
         ]),

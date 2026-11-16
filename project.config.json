@@ -1,0 +1,20 @@
+{
+  "$schema": "./project.config.schema.json",
+  "slug": "fcar",
+  "displayName": "fcar",
+  "description": "Vitrine virtual de loja de carros",
+  "domain": "fcar.fpoiato.com",
+  "hostedZone": { "name": "fpoiato.com", "id": "Z094351536ZBINA5SU45F" },
+  "aws": { "account": "986873053420", "region": "us-east-1", "cdkQualifier": "hnb659fds" },
+  "github": {
+    "owner": "fpoiato",
+    "repo": "fcar",
+    "ownerId": 28718134,
+    "repoId": 1459367548,
+    "projectNumber": 2
+  },
+  "web": { "distributionIds": { "blue": "E3GC1S5KZJXEU3", "green": "E1ZMKROHY90H2W" } },
+  "locale": "pt-BR",
+  "currency": "BRL",
+  "timeZone": "America/Sao_Paulo"
+}

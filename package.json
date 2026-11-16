@@ -19,7 +19,7 @@
     "build": "npm run build --workspaces --if-present",
     "synth": "npm run synth -w infra",
     "test:ci-scripts": "node --test .github/scripts/*.test.mjs",
-    "e2e": "npm run e2e -w @fcar/frontend"
+    "e2e": "npm run e2e -w @app/frontend"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

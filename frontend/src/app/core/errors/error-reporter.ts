@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import type { ClientErrorEventInput } from '@fcar/shared';
+import type { ClientErrorEventInput } from '@app/shared';
 import { APP_CONFIG } from '../config/app-config';
 
 export type ReportInput = Omit<

@@ -12,7 +12,7 @@ describe('ErrorReporter', () => {
     fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
     vi.stubGlobal('fetch', fetchMock);
     TestBed.configureTestingModule({
-      providers: [{ provide: APP_CONFIG, useValue: buildConfig('green', '1.2.3') }],
+      providers: [{ provide: APP_CONFIG, useValue: buildConfig('green', '1.2.3', 'exemplo.com') }],
     });
     reporter = TestBed.inject(ErrorReporter);
   });
@@ -32,7 +32,7 @@ describe('ErrorReporter', () => {
     vi.advanceTimersByTime(REPORTER_LIMITS.debounceMs);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe('https://api-green.fcar.fpoiato.com/client-errors');
+    expect(url).toBe('https://api-green.exemplo.com/client-errors');
     expect(init.headers['Content-Type']).toBe('text/plain');
     expect(sentEvents()).toEqual([
       expect.objectContaining({ type: 'js', message: 'a', color: 'green', appVersion: '1.2.3' }),

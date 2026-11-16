@@ -4,7 +4,7 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import { describe, expect, it } from 'vitest';
 import { BackendStack } from '../lib/backend-stack.js';
-import { env } from '../lib/config.js';
+import { env, name, ns, PROJECT } from '../lib/config.js';
 
 const app = new App();
 const deps = new Stack(app, 'deps', { env });
@@ -13,12 +13,12 @@ const stack = new BackendStack(app, 'backend', {
   activeColor: 'blue',
   zone: route53.HostedZone.fromHostedZoneAttributes(deps, 'Z', {
     hostedZoneId: 'Z1',
-    zoneName: 'fpoiato.com',
+    zoneName: PROJECT.hostedZoneName,
   }),
   certificate: acm.Certificate.fromCertificateArn(
     deps,
     'C',
-    'arn:aws:acm:us-east-1:986873053420:certificate/x',
+    `arn:aws:acm:${PROJECT.region}:${PROJECT.account}:certificate/x`,
   ),
 });
 const t = Template.fromStack(stack);
@@ -35,7 +35,7 @@ describe('ErrorPipeline', () => {
   it('cria o log group central retido', () => {
     t.hasResource('AWS::Logs::LogGroup', {
       DeletionPolicy: 'Retain',
-      Properties: Match.objectLike({ LogGroupName: '/fcar/errors' }),
+      Properties: Match.objectLike({ LogGroupName: ns('errors') }),
     });
   });
 
@@ -52,18 +52,18 @@ describe('ErrorPipeline', () => {
     }
   });
 
-  it('o forwarder não assina o /fcar/errors (sem recursão)', () => {
+  it('o forwarder não assina o log central (sem recursão)', () => {
     expect(subscribedGroups().some((s) => s.includes('Central'))).toBe(false);
   });
 
   it('forwarder escreve no log central', () => {
     t.hasResourceProperties('AWS::Lambda::Function', {
-      FunctionName: 'fcar-error-forwarder',
-      Environment: { Variables: Match.objectLike({ CENTRAL_ERRORS_LOG_GROUP: '/fcar/errors' }) },
+      FunctionName: name('error-forwarder'),
+      Environment: { Variables: Match.objectLike({ CENTRAL_ERRORS_LOG_GROUP: ns('errors') }) },
     });
   });
 
-  it('error-to-issue assina o /fcar/errors e não é assinado por ninguém', () => {
+  it('error-to-issue assina o log central e não é assinado por ninguém', () => {
     const central = subs().filter((r) =>
       JSON.stringify(r.Properties.LogGroupName).includes('Central'),
     );
@@ -74,11 +74,11 @@ describe('ErrorPipeline', () => {
 
   it('error-to-issue: secret do token e limites', () => {
     t.hasResourceProperties('AWS::Lambda::Function', {
-      FunctionName: 'fcar-error-to-issue',
+      FunctionName: name('error-to-issue'),
       Environment: {
         Variables: Match.objectLike({
-          GITHUB_REPO: 'fpoiato/fcar',
-          GITHUB_TOKEN_SECRET: 'fcar/github-issues-token',
+          GITHUB_REPO: PROJECT.repo,
+          GITHUB_TOKEN_SECRET: `${PROJECT.slug}/github-issues-token`,
           MAX_ISSUES_PER_HOUR: '10',
         }),
       },
@@ -89,9 +89,9 @@ describe('ErrorPipeline', () => {
   });
 
   it('alarmes de volume de erros e de falha do forwarder', () => {
-    t.hasResourceProperties('AWS::CloudWatch::Alarm', { AlarmName: 'fcar-central-errors-high' });
+    t.hasResourceProperties('AWS::CloudWatch::Alarm', { AlarmName: name('central-errors-high') });
     t.hasResourceProperties('AWS::CloudWatch::Alarm', {
-      AlarmName: 'fcar-error-forwarder-failing',
+      AlarmName: name('error-forwarder-failing'),
     });
   });
 });

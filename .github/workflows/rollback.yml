@@ -23,14 +23,16 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run build -w @fcar/shared
+      - run: npm run build -w @app/shared
+      - id: cfg
+        uses: ./.github/actions/project-config
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::986873053420:role/fcar-gha-deploy
-          aws-region: us-east-1
+          role-to-assume: ${{ steps.cfg.outputs.deploy-role-arn }}
+          aws-region: ${{ steps.cfg.outputs.region }}
       - name: Swap reverso
         run: |
-          ACTIVE=$(aws ssm get-parameter --name /fcar/active-color --query Parameter.Value --output text)
+          ACTIVE=$(aws ssm get-parameter --name "/${{ steps.cfg.outputs.slug }}/active-color" --query Parameter.Value --output text)
           if [ "$ACTIVE" = "blue" ]; then TARGET=green; else TARGET=blue; fi
           echo "Rollback: $ACTIVE -> $TARGET"
           bash infra/scripts/swap.sh "$TARGET"

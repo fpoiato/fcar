@@ -25,7 +25,7 @@ async function gh<T>(method: string, path: string, body?: unknown): Promise<T> {
       Authorization: `Bearer ${await token()}`,
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'fcar-error-to-issue',
+      'User-Agent': `${process.env.APP_SLUG ?? 'app'}-error-to-issue`,
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,

@@ -2,7 +2,7 @@ import { CurrencyPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
-  selector: 'fcar-home',
+  selector: 'app-home',
   imports: [CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -17,7 +17,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
       padding: 2rem 0;
     }
     .hint {
-      color: var(--fcar-muted);
+      color: var(--app-muted);
     }
   `,
 })

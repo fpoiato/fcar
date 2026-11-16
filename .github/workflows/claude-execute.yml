@@ -92,7 +92,8 @@ jobs:
         run: |
           {
             echo 'text<<PROMPT_EOF'
-            sed -e "s/{{ISSUE}}/${{ needs.start.outputs.issue }}/g" -e "s/{{MODE}}/${{ needs.start.outputs.mode }}/g" .github/prompts/executor.md
+            sed -e "s/{{ISSUE}}/${{ needs.start.outputs.issue }}/g" -e "s/{{MODE}}/${{ needs.start.outputs.mode }}/g" -e "s#{{PROJECT}}#$(node -p "require('./project.config.json').displayName")#g" -e "s#{{REPO}}#${{ github.repository }}#g" \
+                .github/prompts/executor.md
             echo 'PROMPT_EOF'
           } >> "$GITHUB_OUTPUT"
 

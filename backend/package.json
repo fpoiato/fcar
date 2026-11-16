@@ -1,5 +1,5 @@
 {
-  "name": "@fcar/backend",
+  "name": "@app/backend",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "@aws-sdk/client-dynamodb": "^3.1169.0",
     "@aws-sdk/client-secrets-manager": "^3.1169.0",
     "@aws-sdk/lib-dynamodb": "^3.1169.0",
-    "@fcar/shared": "*",
+    "@app/shared": "*",
     "zod": "^3.25.76"
   },
   "devDependencies": {

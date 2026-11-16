@@ -12,7 +12,13 @@ Vitrine virtual de uma loja de carros em **fcar.fpoiato.com**. Repositório **p�
 - **Pagamentos:** Asaas (PIX e cartão). Dados de cartão nunca passam pelo nosso backend.
 - **IaC:** AWS CDK em TypeScript (`infra/`), conta `986873053420`, região `us-east-1`.
 - **Observabilidade:** logs estruturados JSON por Lambda; **todo erro** de qualquer Lambda e do frontend vai para o log group central
-  `/fcar/errors`, que gera issues no GitHub (analisadas pelo Claude no GitHub Actions) na coluna **Triage**.
+  `/<slug>/errors`, que gera issues no GitHub (analisadas pelo Claude no GitHub Actions) na coluna **Triage**.
+
+## Configuração do projeto
+
+Nome, domínio, zona DNS, conta/região AWS e repositório ficam **só** em `project.config.json`
+(infra, scripts, workflows, prompts e frontend leem dele). Recursos AWS usam o prefixo `slug`
+(`<slug>-backend`, `/<slug>/errors`, `<slug>-web-blue`...). Nunca escreva esses valores no código.
 
 ## Estrutura
 
@@ -51,11 +57,11 @@ Antes de abrir PR, `npm run lint && npm run typecheck && npm test` precisam pass
 
 ## Regras de código
 
-- TypeScript `strict`. Sem `any` sem justificativa. Sem `console.*` — use o logger de `@fcar/shared`.
+- TypeScript `strict`. Sem `any` sem justificativa. Sem `console.*` — use o logger de `@app/shared`.
 - Validação de entrada com zod em toda borda (API, eventos, webhooks). Schemas compartilhados em `packages/shared`.
 - Valores monetários em **centavos** (inteiro). Datas em ISO-8601 UTC; exibição em `America/Sao_Paulo`.
 - **Testes:** todo código de backend tem unit test (vitest). Toda feature de frontend tem e2e (Playwright).
-- **Toda Lambda** é criada pelo construct `FcarFunction` (garante log group, aliases blue/green e o envio de erros ao `/fcar/errors`).
+- **Toda Lambda** é criada pelo construct `AppFunction` (garante log group, aliases blue/green e o envio de erros ao `/<slug>/errors`).
 - Erros: deixe exceções inesperadas propagarem até o wrapper do handler (ele loga `level=ERROR`). Não engula erros.
 - Não logue dados pessoais (email, telefone, CPF, tokens). O logger tem redação, mas não dependa só dela.
 
@@ -64,11 +70,11 @@ Antes de abrir PR, `npm run lint && npm run typecheck && npm test` precisam pass
 - Erros do navegador (JS, promessas, HTTP 5xx/0, CSP, chunk, `console.error`) são enviados
   automaticamente para `POST /client-errors` (`frontend/src/app/core/errors`). Não engula erros;
   deixe-os chegar ao `ErrorHandler`.
-- Cada cor é um build próprio: `ng build --define "FCAR_COLOR='green'" --define "FCAR_APP_VERSION='<sha>'"`.
+- Cada cor é um build próprio: `ng build --define "APP_COLOR='green'" --define "APP_VERSION='<sha>'"`.
   O frontend de uma cor fala com a API da mesma cor (`api-<cor>.fcar.fpoiato.com`).
 - Nada de script ou handler inline no HTML: o CSP (`script-src 'self'`) bloqueia.
   Por isso `inlineCritical` está desligado no build.
-- Componentes standalone, `OnPush`, prefixo `fcar-`.
+- Componentes standalone, `OnPush`, prefixo `app-`.
 
 ## DynamoDB — retrocompatibilidade (regra dura)
 

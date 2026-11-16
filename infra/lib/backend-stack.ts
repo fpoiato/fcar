@@ -10,9 +10,9 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import type { Construct } from 'constructs';
-import { FCAR, HOSTS } from './config.js';
+import { HOSTS, PROJECT, name, ns } from './config.js';
 import { ErrorPipeline } from './constructs/error-pipeline.js';
-import { COLORS, type Color, FcarFunction } from './constructs/fcar-function.js';
+import { COLORS, type Color, AppFunction } from './constructs/app-function.js';
 
 /** Origens do frontend autorizadas a chamar a API (inclui o dev server do Angular). */
 export const ALLOWED_ORIGINS = [
@@ -32,7 +32,7 @@ export const CLIENT_ERRORS_LIMITS = {
 export interface BackendStackProps extends StackProps {
   zone: route53.IHostedZone;
   certificate: acm.ICertificate;
-  /** Cor que recebe api.fcar / ws.fcar. Vem de /fcar/active-color via contexto. */
+  /** Cor que recebe api. / ws. Vem de /<slug>/active-color via contexto. */
   activeColor: Color;
 }
 
@@ -47,14 +47,14 @@ export class BackendStack extends Stack {
   readonly table: dynamodb.Table;
   readonly connectionsTable: dynamodb.Table;
   readonly restApi: apigw.RestApi;
-  readonly functions: FcarFunction[] = [];
+  readonly functions: AppFunction[] = [];
 
   constructor(scope: Construct, id: string, props: BackendStackProps) {
     super(scope, id, props);
 
     // ---------- Dados ----------
     this.table = new dynamodb.Table(this, 'MainTable', {
-      tableName: 'fcar-main',
+      tableName: name('main'),
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -71,7 +71,7 @@ export class BackendStack extends Stack {
     });
 
     this.connectionsTable = new dynamodb.Table(this, 'ConnectionsTable', {
-      tableName: 'fcar-ws-connections',
+      tableName: name('ws-connections'),
       partitionKey: { name: 'connectionId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       timeToLiveAttribute: 'ttl',
@@ -84,13 +84,13 @@ export class BackendStack extends Stack {
 
     // ---------- REST ----------
     const accessLogs = new logs.LogGroup(this, 'RestAccessLogs', {
-      logGroupName: '/fcar/apigw/rest-access',
+      logGroupName: ns('apigw/rest-access'),
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
     this.restApi = new apigw.RestApi(this, 'RestApi', {
-      restApiName: 'fcar-api',
+      restApiName: name('api'),
       deploy: false,
       cloudWatchRole: false, // a conta já tem a role de logs do API Gateway
       endpointConfiguration: { types: [apigw.EndpointType.REGIONAL] },
@@ -158,12 +158,12 @@ export class BackendStack extends Stack {
 
     // WAF: limite por IP no endpoint público de erros do frontend.
     const waf = new wafv2.CfnWebACL(this, 'RestWaf', {
-      name: 'fcar-api',
+      name: name('api'),
       scope: 'REGIONAL',
       defaultAction: { allow: {} },
       visibilityConfig: {
         cloudWatchMetricsEnabled: true,
-        metricName: 'fcar-api',
+        metricName: name('api'),
         sampledRequestsEnabled: true,
       },
       rules: [
@@ -188,7 +188,7 @@ export class BackendStack extends Stack {
           },
           visibilityConfig: {
             cloudWatchMetricsEnabled: true,
-            metricName: 'fcar-client-errors-rate',
+            metricName: name('client-errors-rate'),
             sampledRequestsEnabled: true,
           },
         },
@@ -227,7 +227,7 @@ export class BackendStack extends Stack {
     this.connectionsTable.grantReadWriteData(wsConnection.fn);
 
     const wsApi = new apigwv2.CfnApi(this, 'WsApi', {
-      name: 'fcar-ws',
+      name: name('ws'),
       protocolType: 'WEBSOCKET',
       routeSelectionExpression: '$request.body.action',
     });
@@ -318,8 +318,8 @@ export class BackendStack extends Stack {
     new CfnOutput(this, 'ActiveColor', { value: props.activeColor });
   }
 
-  addFunction(name: string, environment?: Record<string, string>): FcarFunction {
-    const f = new FcarFunction(this, `Fn-${name}`, {
+  addFunction(name: string, environment?: Record<string, string>): AppFunction {
+    const f = new AppFunction(this, `Fn-${name}`, {
       name,
       environment: {
         TABLE_NAME: this.table.tableName,
@@ -333,7 +333,7 @@ export class BackendStack extends Stack {
   }
 
   /** Rota REST que invoca o alias da cor da stage (`${stageVariables.color}`). */
-  addRestRoute(method: string, routePath: string, f: FcarFunction): apigw.Method {
+  addRestRoute(method: string, routePath: string, f: AppFunction): apigw.Method {
     const resource = this.restApi.root.resourceForPath(routePath);
     const integration = new apigw.Integration({
       type: apigw.IntegrationType.AWS_PROXY,
@@ -349,7 +349,7 @@ export class BackendStack extends Stack {
     return m;
   }
 
-  private allowInvoke(f: FcarFunction, id: string, sourceArn: string): void {
+  private allowInvoke(f: AppFunction, id: string, sourceArn: string): void {
     for (const color of COLORS) {
       new lambda.CfnPermission(this, `${id}-${color}`, {
         action: 'lambda:InvokeFunction',
@@ -369,4 +369,4 @@ export class BackendStack extends Stack {
   }
 }
 
-export { FCAR };
+export { PROJECT };

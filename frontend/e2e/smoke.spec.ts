@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 /**
  * Smoke do deploy (#15): roda contra a cor inativa publicada.
- * E2E_BASE_URL = https://<cor>.fcar.fpoiato.com, SMOKE_API_URL = https://api-<cor>.fcar.fpoiato.com
+ * E2E_BASE_URL = https://<cor>.<domínio>, SMOKE_API_URL = https://api-<cor>.<domínio>
  * e SMOKE_COLOR = <cor>. Sem essas variáveis (e2e local) os testes são ignorados.
  */
 const API = process.env['SMOKE_API_URL'];

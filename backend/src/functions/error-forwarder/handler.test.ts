@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cwl, handler } from './handler.js';
 
 vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-vi.stubEnv('CENTRAL_ERRORS_LOG_GROUP', '/fcar/errors');
+vi.stubEnv('CENTRAL_ERRORS_LOG_GROUP', '/<slug>/errors');
 const mock = mockClient(cwl);
 beforeEach(() => mock.reset());
 
@@ -42,7 +42,7 @@ describe('error-forwarder', () => {
     );
     expect(res).toEqual({ forwarded: 2 });
     const put = mock.commandCalls(PutLogEventsCommand)[0]!.args[0].input;
-    expect(put.logGroupName).toBe('/fcar/errors');
+    expect(put.logGroupName).toBe('/<slug>/errors');
     expect(put.logStreamName).toMatch(/^\d{4}-\d{2}-\d{2}\/fcar-health$/);
     expect(put.logEvents!.map((e) => JSON.parse(e.message!).kind)).toEqual([
       'timeout',

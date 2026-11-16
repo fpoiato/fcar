@@ -18,7 +18,7 @@ const defaultSink: LogSink = (line) => {
 
 /**
  * Logger JSON de uma linha por evento. O campo `level` é usado pela
- * subscription filter que alimenta o log group central `/fcar/errors`.
+ * subscription filter que alimenta o log group central `/<slug>/errors`.
  */
 export class Logger {
   private context: LogContext = {};
@@ -66,8 +66,8 @@ export class Logger {
       service: this.service,
       function: process.env.AWS_LAMBDA_FUNCTION_NAME,
       version: process.env.AWS_LAMBDA_FUNCTION_VERSION,
-      color: process.env.FCAR_COLOR,
-      appVersion: process.env.FCAR_APP_VERSION,
+      color: process.env.APP_COLOR,
+      appVersion: process.env.APP_VERSION,
       ...(redact(this.context) as object),
       message: redact(message),
       ...(data ? { data: redact(data) } : {}),
