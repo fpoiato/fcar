@@ -1,4 +1,3 @@
-import { gunzipSync } from 'node:zlib';
 import {
   CloudWatchLogsClient,
   CreateLogStreamCommand,
@@ -6,8 +5,9 @@ import {
   ResourceAlreadyExistsException,
 } from '@aws-sdk/client-cloudwatch-logs';
 import { Logger, withHandler } from '@fcar/shared';
-import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, Context } from 'aws-lambda';
+import type { CloudWatchLogsEvent, Context } from 'aws-lambda';
 import { type CentralError, toCentralError } from '../../lib/central-error.js';
+import { decodeLogsEvent } from '../../lib/cloudwatch-logs.js';
 
 /**
  * Recebe, via subscription filter, as linhas suspeitas de erro de todas as Lambdas do projeto
@@ -18,10 +18,6 @@ import { type CentralError, toCentralError } from '../../lib/central-error.js';
 const logger = new Logger('error-forwarder');
 export const cwl = new CloudWatchLogsClient({});
 
-export function decode(event: CloudWatchLogsEvent): CloudWatchLogsDecodedData {
-  return JSON.parse(gunzipSync(Buffer.from(event.awslogs.data, 'base64')).toString('utf8'));
-}
-
 async function ensureStream(group: string, stream: string): Promise<void> {
   try {
     await cwl.send(new CreateLogStreamCommand({ logGroupName: group, logStreamName: stream }));
@@ -31,7 +27,7 @@ async function ensureStream(group: string, stream: string): Promise<void> {
 }
 
 export const handler = withHandler(logger, async (event: CloudWatchLogsEvent, _ctx: Context) => {
-  const data = decode(event);
+  const data = decodeLogsEvent(event);
   if (data.messageType !== 'DATA_MESSAGE') return { forwarded: 0 };
 
   const errors = data.logEvents

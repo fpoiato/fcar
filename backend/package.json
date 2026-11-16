@@ -9,10 +9,13 @@
   },
   "dependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.1169.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1169.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.1169.0",
     "@aws-sdk/client-dynamodb": "^3.1169.0",
+    "@aws-sdk/client-secrets-manager": "^3.1169.0",
     "@aws-sdk/lib-dynamodb": "^3.1169.0",
-    "@fcar/shared": "*"
+    "@fcar/shared": "*",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "aws-sdk-client-mock": "^4.1.0"
