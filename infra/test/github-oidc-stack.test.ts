@@ -68,3 +68,38 @@ describe('GithubOidcStack', () => {
     }
   });
 });
+
+describe('permissões de deploy e swap', () => {
+  const policies = JSON.stringify(template.findResources('AWS::IAM::Policy'));
+
+  it('Lambda só nas funções fcar-*', () => {
+    expect(policies).toContain('lambda:PublishVersion');
+    expect(policies).toContain('function:fcar-*');
+  });
+
+  it('DNS só na zona e só para nomes sob fcar.fpoiato.com', () => {
+    template.hasResourceProperties('AWS::IAM::Policy', {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Sid: 'SwapDns',
+            Resource: 'arn:aws:route53:::hostedzone/Z094351536ZBINA5SU45F',
+            Condition: {
+              'ForAllValues:StringLike': {
+                'route53:ChangeResourceRecordSetsNormalizedRecordNames': [
+                  'fcar.fpoiato.com',
+                  '*.fcar.fpoiato.com',
+                  '_fcar.fpoiato.com',
+                ],
+              },
+            },
+          }),
+        ]),
+      },
+    });
+  });
+
+  it('CloudFront: move de alias e leitura de distribuições', () => {
+    expect(policies).toContain('cloudfront:AssociateAlias');
+  });
+});

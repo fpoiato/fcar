@@ -20,6 +20,12 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   { echo "active=$ACTIVE"; echo "inactive=$INACTIVE"; } >>"$GITHUB_OUTPUT"
 fi
 
+# -1. Stacks de base primeiro: a role de deploy (fcar-github-oidc) recebe aqui as permissões que os
+#     passos seguintes usam. O próprio CloudFormation roda com a role de execução do CDK.
+(cd "$ROOT/infra" && npx cdk deploy fcar-github-oidc fcar-dns-certs \
+  -c "fcar:activeColor=$ACTIVE" --require-approval never)
+sleep 10 # propagação do IAM
+
 FUNCTIONS=$(aws lambda list-functions --query "Functions[?starts_with(FunctionName,'fcar-')].FunctionName" --output text)
 
 # 0. Proteção da cor ativa: enquanto o alias ainda aponta para $LATEST (estado inicial do CDK),
