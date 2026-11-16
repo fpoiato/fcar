@@ -1,0 +1,9 @@
+{
+  "app": "npx tsx bin/fcar.ts",
+  "context": {
+    "fcar:account": "986873053420",
+    "fcar:region": "us-east-1",
+    "fcar:domain": "fcar.fpoiato.com",
+    "fcar:hostedZone": "fpoiato.com"
+  }
+}
