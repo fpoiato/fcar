@@ -24,3 +24,17 @@ AWS CDK (TypeScript). Conta `986873053420`, região `us-east-1`.
 ```bash
 npx cdk deploy fcar-github-oidc
 ```
+
+## Hosts
+
+Definidos em `lib/config.ts` (`HOSTS`), todos cobertos pelo certificado:
+
+| Host                                               | Uso                                         |
+| -------------------------------------------------- | ------------------------------------------- |
+| `fcar.fpoiato.com`                                 | frontend, cor ativa                         |
+| `blue.fcar.` / `green.fcar.`                       | frontend por cor (smoke test antes do swap) |
+| `api.fcar.` / `api-blue.fcar.` / `api-green.fcar.` | API REST ativa e por cor                    |
+| `ws.fcar.` / `ws-blue.fcar.` / `ws-green.fcar.`    | WebSocket ativo e por cor                   |
+| `media.fcar.`                                      | fotos das unidades                          |
+
+Registros DNS são criados pelas stacks que os usam (#5, #6), apenas sob `*.fcar.fpoiato.com`.
