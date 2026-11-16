@@ -67,6 +67,65 @@ export class GithubOidcStack extends Stack {
       }),
     );
 
+    // Deploy na cor inativa e swap (infra/scripts/deploy.sh e swap.sh).
+    const arn = (svc: string, res: string) =>
+      `arn:aws:${svc}:${FCAR.region}:${FCAR.account}:${res}`;
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'LambdaVersionsAndAliases',
+        actions: ['lambda:GetAlias', 'lambda:PublishVersion', 'lambda:UpdateAlias'],
+        resources: [arn('lambda', 'function:fcar-*'), arn('lambda', 'function:fcar-*:*')],
+      }),
+    );
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'ListFunctionsAndStacks',
+        actions: ['lambda:ListFunctions', 'cloudformation:DescribeStacks'],
+        resources: ['*'],
+      }),
+    );
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'ApiGatewayDeploymentsAndMappings',
+        actions: ['apigateway:GET', 'apigateway:POST', 'apigateway:PATCH'],
+        resources: [
+          `arn:aws:apigateway:${FCAR.region}::/restapis/*`,
+          `arn:aws:apigateway:${FCAR.region}::/apis/*`,
+          `arn:aws:apigateway:${FCAR.region}::/domainnames/*`,
+        ],
+      }),
+    );
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'SwapCloudFrontAlias',
+        actions: ['cloudfront:GetDistribution', 'cloudfront:AssociateAlias'],
+        resources: [`arn:aws:cloudfront::${FCAR.account}:distribution/*`],
+      }),
+    );
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'SwapDns',
+        actions: ['route53:ChangeResourceRecordSets'],
+        resources: [`arn:aws:route53:::hostedzone/${FCAR.hostedZoneId}`],
+        conditions: {
+          'ForAllValues:StringLike': {
+            'route53:ChangeResourceRecordSetsNormalizedRecordNames': [
+              FCAR.domain,
+              `*.${FCAR.domain}`,
+              `_${FCAR.domain}`, // TXT de prova de posse exigido pelo associate-alias
+            ],
+          },
+        },
+      }),
+    );
+    deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'SwapDnsWait',
+        actions: ['route53:GetChange'],
+        resources: ['arn:aws:route53:::change/*'],
+      }),
+    );
+
     // Leitura para PRs (cdk diff): não pode alterar nada.
     const readOnlyRole = new iam.Role(this, 'ReadOnlyRole', {
       roleName: 'fcar-gha-readonly',

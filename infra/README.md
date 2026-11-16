@@ -62,3 +62,12 @@ npm run swap -w infra -- green   # ou blue
 ```
 
 Move frontend, API e WebSocket para a cor informada. Ver [ADR 0002](../docs/adr/0002-blue-green-frontend.md).
+
+## Deploy automático e rollback
+
+- `.github/workflows/deploy.yml` (push na `main`): `infra/scripts/deploy.sh` faz deploy **somente na cor inativa**
+  (versão + alias das Lambdas, implantação das stages inativas, sync do bucket e invalidação),
+  depois roda o smoke (`frontend/e2e/smoke.spec.ts`) em `<cor>.fcar` / `api-<cor>.fcar`.
+  O job `swap` usa o environment `prod-swap` (aprovação manual) e chama `swap.sh`.
+- `.github/workflows/rollback.yml` (manual): swap reverso para a cor anterior, também com aprovação.
+- No primeiro deploy, a cor ativa ainda aponta os aliases para `$LATEST`; o script a fixa numa versão antes do `cdk deploy`.
