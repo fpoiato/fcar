@@ -99,7 +99,24 @@ describe('permissões de deploy e swap', () => {
     });
   });
 
-  it('CloudFront: move de alias e leitura de distribuições', () => {
-    expect(policies).toContain('cloudfront:AssociateAlias');
+  it('CloudFront: mover alias exige UpdateDistribution, só nas duas distribuições do projeto', () => {
+    template.hasResourceProperties('AWS::IAM::Policy', {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Sid: 'SwapCloudFrontAlias',
+            Action: [
+              'cloudfront:GetDistribution',
+              'cloudfront:AssociateAlias',
+              'cloudfront:UpdateDistribution',
+            ],
+            Resource: [
+              'arn:aws:cloudfront::986873053420:distribution/E3GC1S5KZJXEU3',
+              'arn:aws:cloudfront::986873053420:distribution/E1ZMKROHY90H2W',
+            ],
+          }),
+        ]),
+      },
+    });
   });
 });
