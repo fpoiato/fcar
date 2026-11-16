@@ -4,7 +4,12 @@ name: project-sync
 on:
   issues:
     types: [opened, reopened, labeled, unlabeled, closed]
-  workflow_dispatch: # ressincroniza todas as issues
+  workflow_dispatch: # sem `issue`: ressincroniza todas as issues
+    inputs:
+      issue:
+        description: Número da issue (vazio = todas)
+        required: false
+        type: string
   # Chamado pelo executor/revisor depois de mudarem labels com o GITHUB_TOKEN
   # (essas mudanças não disparam o evento `issues`).
   workflow_call:
