@@ -8,7 +8,9 @@
     "test": "vitest run --passWithNoTests",
     "synth": "cdk synth --quiet",
     "cdk": "cdk",
-    "deploy:backend": "cdk deploy fcar-backend -c fcar:activeColor=$(aws ssm get-parameter --name /fcar/active-color --query Parameter.Value --output text)"
+    "deploy:backend": "cdk deploy fcar-backend -c fcar:activeColor=$(aws ssm get-parameter --name /fcar/active-color --query Parameter.Value --output text)",
+    "deploy:frontend": "cdk deploy fcar-frontend -c fcar:activeColor=$(aws ssm get-parameter --name /fcar/active-color --query Parameter.Value --output text)",
+    "swap": "scripts/swap.sh"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.277.0",
