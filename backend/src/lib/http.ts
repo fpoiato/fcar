@@ -20,6 +20,15 @@ export function json(status: number, body: unknown, headers: Record<string, stri
   } satisfies APIGatewayProxyResult;
 }
 
+/** CORS da resposta: reflete a origem só se estiver na lista `ALLOWED_ORIGINS`. */
+export function corsHeaders(event: APIGatewayProxyEvent): Record<string, string> {
+  const origin = event.headers?.origin ?? event.headers?.Origin;
+  const allowed = (process.env.ALLOWED_ORIGINS ?? '').split(',').filter(Boolean);
+  return origin && allowed.includes(origin)
+    ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+    : {};
+}
+
 export type HttpFn = (
   event: APIGatewayProxyEvent,
   context: Context,
@@ -42,14 +51,18 @@ export function httpHandler(service: string, fn: HttpFn) {
         context.awsRequestId;
       try {
         const res = await fn(event, context, logger);
-        return { ...res, headers: { ...res.headers, 'X-Correlation-Id': correlationId } };
+        return {
+          ...res,
+          headers: { ...res.headers, ...corsHeaders(event), 'X-Correlation-Id': correlationId },
+        };
       } catch (err) {
+        const cors = corsHeaders(event);
         if (err instanceof HttpError) {
           if (err.status >= 500) logger.error(err.message, err);
-          return json(err.status, { error: err.code, message: err.message, correlationId });
+          return json(err.status, { error: err.code, message: err.message, correlationId }, cors);
         }
         logger.error('Unhandled error', err);
-        return json(500, { error: 'internal_error', correlationId });
+        return json(500, { error: 'internal_error', correlationId }, cors);
       }
     },
   );

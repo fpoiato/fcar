@@ -7,11 +7,27 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import type { Construct } from 'constructs';
 import { FCAR, HOSTS } from './config.js';
 import { ErrorPipeline } from './constructs/error-pipeline.js';
 import { COLORS, type Color, FcarFunction } from './constructs/fcar-function.js';
+
+/** Origens do frontend autorizadas a chamar a API (inclui o dev server do Angular). */
+export const ALLOWED_ORIGINS = [
+  `https://${HOSTS.web}`,
+  `https://${HOSTS.webBlue}`,
+  `https://${HOSTS.webGreen}`,
+  'http://localhost:4200',
+];
+
+/** Limites do endpoint público de erros do frontend. */
+export const CLIENT_ERRORS_LIMITS = {
+  stageRate: 20, // req/s somando todos os clientes
+  stageBurst: 40,
+  wafPer5MinPerIp: 100,
+};
 
 export interface BackendStackProps extends StackProps {
   zone: route53.IHostedZone;
@@ -79,11 +95,7 @@ export class BackendStack extends Stack {
       cloudWatchRole: false, // a conta já tem a role de logs do API Gateway
       endpointConfiguration: { types: [apigw.EndpointType.REGIONAL] },
       defaultCorsPreflightOptions: {
-        allowOrigins: [
-          `https://${HOSTS.web}`,
-          `https://${HOSTS.webBlue}`,
-          `https://${HOSTS.webGreen}`,
-        ],
+        allowOrigins: ALLOWED_ORIGINS,
         allowHeaders: ['Content-Type', 'Authorization', 'X-Correlation-Id'],
         allowMethods: apigw.Cors.ALL_METHODS,
         maxAge: Duration.hours(1),
@@ -92,6 +104,9 @@ export class BackendStack extends Stack {
 
     const health = this.addFunction('health');
     this.addRestRoute('GET', 'health', health);
+
+    const clientErrors = this.addFunction('client-errors');
+    this.addRestRoute('POST', 'client-errors', clientErrors);
 
     // Implantação inicial com ID lógico fixo: o CloudFormation nunca a substitui,
     // então as stages não mudam em `cdk deploy` (quem promove é o workflow de deploy).
@@ -117,6 +132,13 @@ export class BackendStack extends Stack {
             throttlingRateLimit: 100,
             metricsEnabled: true,
           },
+          {
+            httpMethod: 'POST',
+            resourcePath: '/~1client-errors',
+            throttlingBurstLimit: CLIENT_ERRORS_LIMITS.stageBurst,
+            throttlingRateLimit: CLIENT_ERRORS_LIMITS.stageRate,
+            metricsEnabled: true,
+          },
         ],
         accessLogSetting: {
           destinationArn: accessLogs.logGroupArn,
@@ -132,6 +154,51 @@ export class BackendStack extends Stack {
           }),
         },
       });
+    }
+
+    // WAF: limite por IP no endpoint público de erros do frontend.
+    const waf = new wafv2.CfnWebACL(this, 'RestWaf', {
+      name: 'fcar-api',
+      scope: 'REGIONAL',
+      defaultAction: { allow: {} },
+      visibilityConfig: {
+        cloudWatchMetricsEnabled: true,
+        metricName: 'fcar-api',
+        sampledRequestsEnabled: true,
+      },
+      rules: [
+        {
+          name: 'client-errors-rate-per-ip',
+          priority: 0,
+          action: { block: {} },
+          statement: {
+            rateBasedStatement: {
+              limit: CLIENT_ERRORS_LIMITS.wafPer5MinPerIp,
+              evaluationWindowSec: 300,
+              aggregateKeyType: 'IP',
+              scopeDownStatement: {
+                byteMatchStatement: {
+                  fieldToMatch: { uriPath: {} },
+                  positionalConstraint: 'STARTS_WITH',
+                  searchString: '/client-errors',
+                  textTransformations: [{ priority: 0, type: 'LOWERCASE' }],
+                },
+              },
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: 'fcar-client-errors-rate',
+            sampledRequestsEnabled: true,
+          },
+        },
+      ],
+    });
+    for (const color of COLORS) {
+      new wafv2.CfnWebACLAssociation(this, `RestWafAssoc-${color}`, {
+        webAclArn: waf.attrArn,
+        resourceArn: `arn:aws:apigateway:${this.region}::/restapis/${this.restApi.restApiId}/stages/${color}`,
+      }).addDependency(restStages[color]);
     }
 
     const restDomain = (host: string, color: Color | 'active') => {
@@ -254,7 +321,11 @@ export class BackendStack extends Stack {
   addFunction(name: string, environment?: Record<string, string>): FcarFunction {
     const f = new FcarFunction(this, `Fn-${name}`, {
       name,
-      environment: { TABLE_NAME: this.table.tableName, ...environment },
+      environment: {
+        TABLE_NAME: this.table.tableName,
+        ALLOWED_ORIGINS: ALLOWED_ORIGINS.join(','),
+        ...environment,
+      },
     });
     this.table.grantReadWriteData(f.fn);
     this.functions.push(f);

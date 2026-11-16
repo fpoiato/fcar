@@ -10,6 +10,18 @@ frontend → POST /client-errors (#10)┘                                       
                                                     fcar-error-to-issue ─▶ issue no GitHub (Triage)
 ```
 
+## Erros do frontend (`POST /client-errors`)
+
+- Público (sem login), aceita até 20 eventos por chamada e 32 KB. Corpo JSON mesmo com
+  `Content-Type: text/plain` (`navigator.sendBeacon`). Contrato em `packages/shared/src/client-errors.ts`.
+- Tipos: `js`, `promise`, `http`, `network` (status 0: rede/CORS/offline), `csp`, `chunk-load`, `console`.
+- Cada evento vira uma linha `level=ERROR` com `data.source=frontend` na Lambda `fcar-client-errors`,
+  e daí segue o mesmo caminho dos erros do backend.
+- Proteções: validação zod com truncamento, throttling da rota (20 req/s, burst 40) e **WAF** com
+  bloqueio por IP acima de 100 requisições em 5 minutos (`fcar-api` / `client-errors-rate-per-ip`).
+- Payload inválido responde 400 e **não** gera log de erro (não vira issue).
+- CORS: a API reflete apenas as origens de `ALLOWED_ORIGINS` (`fcar.`, `blue.`, `green.` e `localhost:4200`).
+
 ## /fcar/errors → issue (`fcar-error-to-issue`)
 
 - **Fingerprint** (`backend/src/lib/errors/fingerprint.ts`): origem + tipo + função + nome do erro +
