@@ -23,10 +23,13 @@ const stack = new BackendStack(app, 'backend', {
 });
 const t = Template.fromStack(stack);
 
+type Sub = { Properties: { LogGroupName: unknown; DestinationArn: unknown } };
+const subs = () => Object.values(t.findResources('AWS::Logs::SubscriptionFilter')) as Sub[];
+/** Log groups assinados pelo forwarder (pipeline de erros das Lambdas). */
 const subscribedGroups = () =>
-  Object.values(t.findResources('AWS::Logs::SubscriptionFilter')).map((r) =>
-    JSON.stringify((r as { Properties: { LogGroupName: unknown } }).Properties.LogGroupName),
-  );
+  subs()
+    .filter((r) => JSON.stringify(r.Properties.DestinationArn).includes('Forwarder'))
+    .map((r) => JSON.stringify(r.Properties.LogGroupName));
 
 describe('ErrorPipeline', () => {
   it('cria o log group central retido', () => {
@@ -37,15 +40,19 @@ describe('ErrorPipeline', () => {
   });
 
   it('assina todas as Lambdas do projeto, exceto o próprio forwarder', () => {
-    const subs = subscribedGroups();
-    expect(subs.length).toBe(2); // health e ws-connection
-    expect(subs.some((s) => s.includes('Forwarder'))).toBe(false);
-    t.allResourcesProperties('AWS::Logs::SubscriptionFilter', {
-      FilterPattern: '?"ERROR" ?"Task timed out" ?"Runtime exited" ?"Runtime.OutOfMemory"',
-    });
+    const groups = subscribedGroups();
+    expect(groups.length).toBe(2); // health e ws-connection (o forwarder e o error-to-issue não)
+    expect(groups.some((s) => s.includes('Forwarder'))).toBe(false);
+    for (const r of subs().filter((x) =>
+      JSON.stringify(x.Properties.DestinationArn).includes('Forwarder'),
+    )) {
+      expect((r.Properties as unknown as { FilterPattern: string }).FilterPattern).toBe(
+        '?"ERROR" ?"Task timed out" ?"Runtime exited" ?"Runtime.OutOfMemory"',
+      );
+    }
   });
 
-  it('nenhuma assinatura no próprio /fcar/errors (sem recursão)', () => {
+  it('o forwarder não assina o /fcar/errors (sem recursão)', () => {
     expect(subscribedGroups().some((s) => s.includes('Central'))).toBe(false);
   });
 
@@ -54,6 +61,31 @@ describe('ErrorPipeline', () => {
       FunctionName: 'fcar-error-forwarder',
       Environment: { Variables: Match.objectLike({ CENTRAL_ERRORS_LOG_GROUP: '/fcar/errors' }) },
     });
+  });
+
+  it('error-to-issue assina o /fcar/errors e não é assinado por ninguém', () => {
+    const central = subs().filter((r) =>
+      JSON.stringify(r.Properties.LogGroupName).includes('Central'),
+    );
+    expect(central).toHaveLength(1);
+    expect(JSON.stringify(central[0]!.Properties.DestinationArn)).toContain('ErrorToIssue');
+    expect(subscribedGroups().some((s) => s.includes('ErrorToIssue'))).toBe(false);
+  });
+
+  it('error-to-issue: Nova Micro, secret do token e limites', () => {
+    t.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: 'fcar-error-to-issue',
+      Environment: {
+        Variables: Match.objectLike({
+          GITHUB_REPO: 'fpoiato/fcar',
+          GITHUB_TOKEN_SECRET: 'fcar/github-issues-token',
+          MAX_ISSUES_PER_HOUR: '10',
+        }),
+      },
+    });
+    const policies = JSON.stringify(t.findResources('AWS::IAM::Policy'));
+    expect(policies).toContain('inference-profile/us.amazon.nova-micro-v1:0');
+    expect(policies).toContain('secretsmanager:GetSecretValue');
   });
 
   it('alarmes de volume de erros e de falha do forwarder', () => {

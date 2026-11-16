@@ -42,6 +42,7 @@ describe('BackendStack', () => {
     const fns = FcarFunction.all(app);
     expect(fns.map((f) => f.functionName).sort()).toEqual([
       'fcar-error-forwarder',
+      'fcar-error-to-issue',
       'fcar-health',
       'fcar-ws-connection',
     ]);
@@ -53,12 +54,12 @@ describe('BackendStack', () => {
     t.resourcePropertiesCountIs(
       'AWS::Lambda::Alias',
       { Name: 'blue', FunctionVersion: '$LATEST' },
-      3,
+      4,
     );
     t.resourcePropertiesCountIs(
       'AWS::Lambda::Alias',
       { Name: 'green', FunctionVersion: '$LATEST' },
-      3,
+      4,
     );
   });
 

@@ -243,7 +243,7 @@ export class BackendStack extends Stack {
 
     // ---------- Observabilidade ----------
     // Sempre por último: assina os logs de todas as Lambdas criadas acima.
-    const errors = new ErrorPipeline(this, 'ErrorPipeline');
+    const errors = new ErrorPipeline(this, 'ErrorPipeline', { table: this.table });
 
     new CfnOutput(this, 'CentralErrorsLogGroup', { value: errors.logGroup.logGroupName });
     new CfnOutput(this, 'RestApiId', { value: this.restApi.restApiId });
