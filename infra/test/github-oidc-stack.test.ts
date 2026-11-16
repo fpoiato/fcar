@@ -1,13 +1,7 @@
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
-import {
-  env,
-  GITHUB_OIDC_SUB_PREFIXES,
-  name,
-  PROJECT,
-  WEB_DISTRIBUTION_IDS,
-} from '../lib/config.js';
+import { env, GITHUB_OIDC_SUB_PREFIXES, name, PROJECT } from '../lib/config.js';
 import { GithubOidcStack } from '../lib/github-oidc-stack.js';
 
 const template = Template.fromStack(new GithubOidcStack(new App(), 'test', { env }));
@@ -104,24 +98,7 @@ describe('permissões de deploy e swap', () => {
     });
   });
 
-  it('CloudFront: mover alias exige UpdateDistribution, só nas duas distribuições do projeto', () => {
-    template.hasResourceProperties('AWS::IAM::Policy', {
-      PolicyDocument: {
-        Statement: Match.arrayWith([
-          Match.objectLike({
-            Sid: 'SwapCloudFrontAlias',
-            Action: [
-              'cloudfront:GetDistribution',
-              'cloudfront:AssociateAlias',
-              'cloudfront:UpdateDistribution',
-            ],
-            Resource: [
-              `arn:aws:cloudfront::${PROJECT.account}:distribution/${WEB_DISTRIBUTION_IDS[0]}`,
-              `arn:aws:cloudfront::${PROJECT.account}:distribution/${WEB_DISTRIBUTION_IDS[1]}`,
-            ],
-          }),
-        ]),
-      },
-    });
+  it('não cita distribuições CloudFront (a stack do frontend concede essas permissões)', () => {
+    expect(policies).not.toContain('cloudfront:');
   });
 });
