@@ -17,3 +17,4 @@ playwright-report/
 .aws/
 frontend/test-results/
 frontend/playwright-report/
+.fcar-review/
