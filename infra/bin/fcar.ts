@@ -2,6 +2,7 @@ import { App, Tags } from 'aws-cdk-lib';
 import { BackendStack } from '../lib/backend-stack.js';
 import { env } from '../lib/config.js';
 import { DnsCertsStack } from '../lib/dns-certs-stack.js';
+import { FrontendStack } from '../lib/frontend-stack.js';
 import { GithubOidcStack } from '../lib/github-oidc-stack.js';
 import { isColor } from '../lib/constructs/fcar-function.js';
 
@@ -15,6 +16,13 @@ if (!isColor(activeColor)) throw new Error(`fcar:activeColor inválido: ${active
 new GithubOidcStack(app, 'fcar-github-oidc', { env });
 const dns = new DnsCertsStack(app, 'fcar-dns-certs', { env });
 new BackendStack(app, 'fcar-backend', {
+  env,
+  zone: dns.zone,
+  certificate: dns.certificate,
+  activeColor,
+});
+
+new FrontendStack(app, 'fcar-frontend', {
   env,
   zone: dns.zone,
   certificate: dns.certificate,

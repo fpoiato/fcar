@@ -54,3 +54,11 @@ Ver [ADR 0001](../docs/adr/0001-blue-green-backend.md).
 - Formato: `CentralError` em `backend/src/lib/central-error.ts`.
 - Alarmes: `fcar-central-errors-high` (> 20 erros em 5 min) e `fcar-error-forwarder-failing`.
 - O próprio forwarder não é assinado, para não haver recursão.
+
+## Swap blue/green
+
+```bash
+npm run swap -w infra -- green   # ou blue
+```
+
+Move frontend, API e WebSocket para a cor informada. Ver [ADR 0002](../docs/adr/0002-blue-green-frontend.md).
