@@ -1,6 +1,6 @@
 name: claude-analyze-error
 
-# Análise das issues de erro (criadas pelo fcar-error-to-issue) pelo Claude Code, dentro da assinatura.
+# Análise das issues de erro (criadas pela Lambda <slug>-error-to-issue) pelo Claude Code, dentro da assinatura.
 # O modelo só lê; quem escreve na issue é este workflow.
 on:
   issues:
@@ -34,10 +34,11 @@ jobs:
       - name: Montar prompt
         id: prompt
         run: |
-          mkdir -p .fcar-analysis
+          mkdir -p .agent-analysis
           {
             echo 'text<<PROMPT_EOF'
-            sed -e "s/{{ISSUE}}/${{ inputs.issue || github.event.issue.number }}/g" .github/prompts/error-analyst.md
+            sed -e "s/{{ISSUE}}/${{ inputs.issue || github.event.issue.number }}/g" -e "s#{{PROJECT}}#$(node -p "require('./project.config.json').displayName")#g" -e "s#{{REPO}}#${{ github.repository }}#g" \
+                .github/prompts/error-analyst.md
             echo 'PROMPT_EOF'
           } >> "$GITHUB_OUTPUT"
 
@@ -70,20 +71,20 @@ jobs:
 
             let result;
             try {
-              result = JSON.parse(fs.readFileSync('.fcar-analysis/result.json', 'utf8'));
+              result = JSON.parse(fs.readFileSync('.agent-analysis/result.json', 'utf8'));
             } catch (e) {
               core.warning(`result.json ausente ou inválido: ${e.message}`);
             }
 
             const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: issueNumber });
-            const marker = '<!-- fcar-analysis:pending -->';
+            const marker = '<!-- analysis:pending -->';
             const section = result
               ? `## Análise (Claude)\n\n${neutralize(result.analysis, 12000)}\n\n<sub>Análise automática: ${run}</sub>`
               : `## Análise (Claude)\n\nNão foi possível gerar a análise automática. Run: ${run}`;
 
             let body = issue.body ?? '';
             body = body.includes(marker)
-              ? body.replace(/## Análise[^\n]*\n[\s\S]*?<!-- fcar-analysis:pending -->/, section)
+              ? body.replace(/## Análise[^\n]*\n[\s\S]*?<!-- analysis:pending -->/, section)
               : `${body}\n\n${section}`;
 
             const update = { ...context.repo, issue_number: issueNumber, body };

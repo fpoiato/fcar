@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "fcar-web": {
+    "web": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -15,7 +15,7 @@
       },
       "root": "",
       "sourceRoot": "src",
-      "prefix": "fcar",
+      "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular/build:application",
@@ -31,9 +31,10 @@
             ],
             "styles": ["src/styles.scss"],
             "define": {
-              "FCAR_COLOR": "'local'",
-              "FCAR_APP_VERSION": "'dev'"
-            }
+              "APP_COLOR": "'local'",
+              "APP_VERSION": "'dev'"
+            },
+            "outputPath": "dist/web"
           },
           "configurations": {
             "production": {
@@ -75,10 +76,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "fcar-web:build:production"
+              "buildTarget": "web:build:production"
             },
             "development": {
-              "buildTarget": "fcar-web:build:development"
+              "buildTarget": "web:build:development"
             }
           },
           "defaultConfiguration": "development"

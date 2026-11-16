@@ -58,7 +58,7 @@ describe('processFingerprint', () => {
     expect(await processFingerprint('f', [err()], now)).toBe('created');
     expect(github.createIssue).toHaveBeenCalledWith(
       '[erro backend] TypeError em fcar-health',
-      expect.stringContaining('<!-- fcar-analysis:pending -->'),
+      expect.stringContaining('<!-- analysis:pending -->'),
       expect.arrayContaining(['status:triage', 'type:error-backend']),
     );
     expect(store.linkIssue).toHaveBeenCalledWith('f', 42, now.toISOString());
@@ -120,7 +120,7 @@ describe('handler', () => {
     m(github.createIssue).mockRejectedValueOnce(new Error('falhou'));
     const payload = {
       messageType: 'DATA_MESSAGE',
-      logGroup: '/fcar/errors',
+      logGroup: '/<slug>/errors',
       logStream: 's',
       logEvents: [
         { id: '1', timestamp: 1, message: JSON.stringify(err()) },

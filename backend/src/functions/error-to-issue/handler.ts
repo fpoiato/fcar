@@ -1,4 +1,4 @@
-import { Logger, redact, withHandler } from '@fcar/shared';
+import { Logger, redact, withHandler } from '@app/shared';
 import type { CloudWatchLogsEvent, Context } from 'aws-lambda';
 import type { CentralError } from '../../lib/central-error.js';
 import { decodeLogsEvent } from '../../lib/cloudwatch-logs.js';
@@ -21,7 +21,7 @@ import {
 } from '../../lib/errors/store.js';
 
 /**
- * Assina o `/fcar/errors`. Para cada assinatura de erro (fingerprint):
+ * Assina o `/<slug>/errors`. Para cada assinatura de erro (fingerprint):
  * - primeira vez: cria uma issue em Triage com marcador de análise pendente (o Claude no GitHub Actions analisa; limite global por hora)
  * - recorrência: acumula e comenta no máximo uma vez por intervalo
  * - issue fechada e o erro voltou: cria nova issue referenciando a anterior

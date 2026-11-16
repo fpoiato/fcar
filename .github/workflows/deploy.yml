@@ -13,10 +13,6 @@ concurrency:
   group: deploy
   cancel-in-progress: false
 
-env:
-  AWS_REGION: us-east-1
-  ROLE_ARN: arn:aws:iam::986873053420:role/fcar-gha-deploy
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -31,11 +27,13 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run build -w @fcar/shared
+      - run: npm run build -w @app/shared
+      - id: cfg
+        uses: ./.github/actions/project-config
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ steps.cfg.outputs.deploy-role-arn }}
+          aws-region: ${{ steps.cfg.outputs.region }}
       - id: deploy
         run: bash infra/scripts/deploy.sh "${GITHUB_SHA::7}"
 
@@ -53,13 +51,15 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
+      - id: cfg
+        uses: ./.github/actions/project-config
       - name: Smoke e2e na cor inativa
         run: npx playwright test smoke.spec.ts --project=chromium
         working-directory: frontend
         env:
           CI: 'true'
-          E2E_BASE_URL: https://${{ env.COLOR }}.fcar.fpoiato.com
-          SMOKE_API_URL: https://api-${{ env.COLOR }}.fcar.fpoiato.com
+          E2E_BASE_URL: https://${{ env.COLOR }}.${{ steps.cfg.outputs.domain }}
+          SMOKE_API_URL: https://api-${{ env.COLOR }}.${{ steps.cfg.outputs.domain }}
           SMOKE_COLOR: ${{ env.COLOR }}
       - name: Relatório do Playwright
         if: failure()
@@ -81,10 +81,12 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run build -w @fcar/shared
+      - run: npm run build -w @app/shared
+      - id: cfg
+        uses: ./.github/actions/project-config
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ steps.cfg.outputs.deploy-role-arn }}
+          aws-region: ${{ steps.cfg.outputs.region }}
       - name: Swap para ${{ needs.deploy.outputs.inactive }}
         run: bash infra/scripts/swap.sh "${{ needs.deploy.outputs.inactive }}"

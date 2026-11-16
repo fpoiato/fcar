@@ -11,7 +11,7 @@ requisições para um host que não está nos seus aliases. Mudar só o DNS não
 
 - `blue.fcar.fpoiato.com` e `green.fcar.fpoiato.com` ficam sempre na sua distribuição (smoke tests).
 - `fcar.fpoiato.com` fica **apenas** na distribuição ativa. O CDK monta os aliases a partir de
-  `fcar:activeColor` (lido de `/fcar/active-color`).
+  `app:activeColor` (lido de `/fcar/active-color`).
 - O swap (`infra/scripts/swap.sh <cor>`):
   1. Grava o TXT `_fcar.fpoiato.com` com o domínio da distribuição de destino (o CloudFront
      exige essa prova de posse mesmo dentro da mesma conta) e roda `aws cloudfront associate-alias`,
@@ -20,7 +20,7 @@ requisições para um host que não está nos seus aliases. Mudar só o DNS não
   2. Atualiza os registros A/AAAA de `fcar.fpoiato.com` para a nova distribuição.
   3. Move `api.` e `ws.` para a stage da nova cor (ver ADR 0001).
   4. Grava a nova cor em `/fcar/active-color`.
-  5. `cdk deploy fcar-backend fcar-frontend -c fcar:activeColor=<cor>`: o template passa a
+  5. `cdk deploy fcar-backend fcar-frontend -c app:activeColor=<cor>`: o template passa a
      descrever o estado real (não muda nada em produção).
 
 ## Consequências

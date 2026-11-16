@@ -21,7 +21,7 @@ describe('health', () => {
   });
 
   it('responde ok com a cor da stage, horário e região', async () => {
-    vi.stubEnv('FCAR_APP_VERSION', '1.2.3');
+    vi.stubEnv('APP_VERSION', '1.2.3');
     vi.stubEnv('AWS_REGION', 'us-east-1');
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-02T03:04:05.000Z'));

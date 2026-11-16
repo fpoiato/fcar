@@ -4,7 +4,7 @@ import {
 } from '@aws-sdk/client-apigatewaymanagementapi';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DeleteCommand, DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { Logger, withHandler } from '@fcar/shared';
+import { Logger, withHandler } from '@app/shared';
 import type { APIGatewayProxyWebsocketEventV2, Context } from 'aws-lambda';
 
 const logger = new Logger('ws-connection');

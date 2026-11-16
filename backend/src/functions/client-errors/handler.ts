@@ -1,9 +1,9 @@
-import { ClientErrorsRequest, MAX_CLIENT_ERRORS_BODY_BYTES } from '@fcar/shared';
+import { ClientErrorsRequest, MAX_CLIENT_ERRORS_BODY_BYTES } from '@app/shared';
 import { HttpError, httpHandler, json } from '../../lib/http.js';
 
 /**
  * Recebe erros do frontend e registra cada um como `level=ERROR` com `data.source=frontend`.
- * O pipeline de erros (#8/#9) leva ao /fcar/errors e às issues. Todo conteúdo aqui é
+ * O pipeline de erros (#8/#9) leva ao /<slug>/errors e às issues. Todo conteúdo aqui é
  * NÃO CONFIÁVEL (vem de qualquer navegador): validado, truncado e redigido pelo logger.
  */
 export const handler = httpHandler('client-errors', async (event, _ctx, logger) => {

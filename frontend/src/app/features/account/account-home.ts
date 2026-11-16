@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
-  selector: 'fcar-account-home',
+  selector: 'app-account-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<h1>Minha conta</h1>
     <p>Em breve: login, visitas, reservas e conversas.</p>`,

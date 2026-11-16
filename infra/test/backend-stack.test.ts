@@ -4,20 +4,20 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import { describe, expect, it } from 'vitest';
 import { BackendStack } from '../lib/backend-stack.js';
-import { env } from '../lib/config.js';
-import { FcarFunction } from '../lib/constructs/fcar-function.js';
+import { env, name, PROJECT } from '../lib/config.js';
+import { AppFunction } from '../lib/constructs/app-function.js';
 
 function synth(activeColor: 'blue' | 'green') {
   const app = new App();
   const deps = new Stack(app, 'deps', { env });
   const zone = route53.HostedZone.fromHostedZoneAttributes(deps, 'Z', {
     hostedZoneId: 'Z1',
-    zoneName: 'fpoiato.com',
+    zoneName: PROJECT.hostedZoneName,
   });
   const certificate = acm.Certificate.fromCertificateArn(
     deps,
     'C',
-    'arn:aws:acm:us-east-1:986873053420:certificate/x',
+    `arn:aws:acm:${PROJECT.region}:${PROJECT.account}:certificate/x`,
   );
   const stack = new BackendStack(app, 'backend', { env, zone, certificate, activeColor });
   return { app, stack, t: Template.fromStack(stack) };
@@ -30,7 +30,7 @@ describe('BackendStack', () => {
     t.hasResource('AWS::DynamoDB::Table', {
       DeletionPolicy: 'Retain',
       Properties: Match.objectLike({
-        TableName: 'fcar-main',
+        TableName: name('main'),
         DeletionProtectionEnabled: true,
         PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true },
         TimeToLiveSpecification: { AttributeName: 'ttl', Enabled: true },
@@ -39,13 +39,13 @@ describe('BackendStack', () => {
   });
 
   it('toda Lambda tem log group próprio e aliases blue/green', () => {
-    const fns = FcarFunction.all(app);
+    const fns = AppFunction.all(app);
     expect(fns.map((f) => f.functionName).sort()).toEqual([
-      'fcar-client-errors',
-      'fcar-error-forwarder',
-      'fcar-error-to-issue',
-      'fcar-health',
-      'fcar-ws-connection',
+      name('client-errors'),
+      name('error-forwarder'),
+      name('error-to-issue'),
+      name('health'),
+      name('ws-connection'),
     ]);
     for (const f of fns) {
       t.hasResourceProperties('AWS::Logs::LogGroup', {
@@ -113,19 +113,20 @@ describe('BackendStack', () => {
       ) as { Properties: { Stage: string } } | undefined;
       return m?.Properties.Stage;
     };
-    expect(stageOf(t, 'api.fcar.fpoiato.com')).toBe('blue');
+    expect(stageOf(t, `api.${PROJECT.domain}`)).toBe('blue');
     const green = synth('green').t;
-    expect(stageOf(green, 'api.fcar.fpoiato.com')).toBe('green');
-    expect(stageOf(green, 'api-blue.fcar.fpoiato.com')).toBe('blue');
-    expect(stageOf(green, 'api-green.fcar.fpoiato.com')).toBe('green');
+    expect(stageOf(green, `api.${PROJECT.domain}`)).toBe('green');
+    expect(stageOf(green, `api-blue.${PROJECT.domain}`)).toBe('blue');
+    expect(stageOf(green, `api-green.${PROJECT.domain}`)).toBe('green');
   });
 
-  it('cria registros só sob fcar.fpoiato.com', () => {
+  it('cria registros só sob o domínio do projeto', () => {
     const names = Object.values(t.findResources('AWS::Route53::RecordSet')).map(
       (r) => (r as { Properties: { Name: string } }).Properties.Name,
     );
     expect(names.length).toBe(6);
-    for (const n of names) expect(n).toMatch(/fcar\.fpoiato\.com\.?$/);
+    for (const n of names)
+      expect(n).toMatch(new RegExp(`${PROJECT.domain.replace(/\./g, '\\.')}\\.?$`));
   });
 
   it('stack tem nome estável', () => {
@@ -171,10 +172,10 @@ describe('POST /client-errors', () => {
 
   it('todas as Lambdas recebem a lista de origens permitidas', () => {
     t.hasResourceProperties('AWS::Lambda::Function', {
-      FunctionName: 'fcar-client-errors',
+      FunctionName: name('client-errors'),
       Environment: {
         Variables: Match.objectLike({
-          ALLOWED_ORIGINS: Match.stringLikeRegexp('https://fcar.fpoiato.com'),
+          ALLOWED_ORIGINS: Match.stringLikeRegexp(`https://${PROJECT.domain}`),
         }),
       },
     });

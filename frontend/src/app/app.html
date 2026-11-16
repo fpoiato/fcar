@@ -1,5 +1,5 @@
 <header class="topbar">
-  <a class="brand" routerLink="/">fcar</a>
+  <a class="brand" routerLink="/">{{ project.displayName }}</a>
   <nav>
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
       >Estoque</a
@@ -11,7 +11,7 @@
   <router-outlet />
 </main>
 <footer class="footer">
-  <span data-testid="copyright">© {{ year }} fcar</span>
+  <span data-testid="copyright">© {{ year }} {{ project.displayName }}</span>
   <span>v{{ config.appVersion }}</span>
   @if (config.color !== 'local') {
     <span class="color" [attr.data-color]="config.color">{{ config.color }}</span>

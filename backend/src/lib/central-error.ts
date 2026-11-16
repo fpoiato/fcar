@@ -1,6 +1,6 @@
-import { redactText } from '@fcar/shared';
+import { redactText } from '@app/shared';
 
-/** Formato de cada evento gravado no log group central `/fcar/errors`. */
+/** Formato de cada evento gravado no log group central `/<slug>/errors`. */
 export interface CentralError {
   timestamp: string;
   source: 'backend' | 'frontend';

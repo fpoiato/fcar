@@ -18,7 +18,7 @@ rollback trivial. O DynamoDB é compartilhado pelas duas cores.
 - **Domínios:**
   - `api-blue.`/`api-green.` e `ws-blue.`/`ws-green.` ficam sempre fixos na sua cor (usados em smoke tests).
   - `api.` e `ws.` apontam para a cor ativa via base path mapping / API mapping. A cor ativa vem
-    do parâmetro SSM `/fcar/active-color`, passado ao CDK por `-c fcar:activeColor=...`.
+    do parâmetro SSM `/fcar/active-color`, passado ao CDK por `-c app:activeColor=...`.
   - O swap atualiza o parâmetro e esses mapeamentos.
 - **DynamoDB:** compartilhado. Toda mudança precisa ser retrocompatível (ver `CLAUDE.md`).
 

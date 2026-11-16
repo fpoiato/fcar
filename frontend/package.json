@@ -1,5 +1,5 @@
 {
-  "name": "@fcar/frontend",
+  "name": "@app/frontend",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -17,7 +17,7 @@
     "@angular/forms": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
-    "@fcar/shared": "*",
+    "@app/shared": "*",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

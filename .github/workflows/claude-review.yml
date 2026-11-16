@@ -81,11 +81,12 @@ jobs:
       - name: Montar prompt
         id: prompt
         run: |
-          mkdir -p .fcar-review
+          mkdir -p .agent-review
           {
             echo 'text<<PROMPT_EOF'
             sed -e "s/{{ISSUE}}/${{ inputs.issue }}/g" -e "s/{{PR}}/${{ inputs.pr }}/g" \
                 -e "s/{{CYCLE}}/${{ steps.ctx.outputs.cycle }}/g" -e "s/{{CI}}/${{ steps.ctx.outputs.ci }}/g" \
+                -e "s#{{PROJECT}}#$(node -p "require('./project.config.json').displayName")#g" -e "s#{{REPO}}#${{ github.repository }}#g" \
                 .github/prompts/reviewer.md
             echo 'PROMPT_EOF'
           } >> "$GITHUB_OUTPUT"
@@ -116,7 +117,7 @@ jobs:
             const max = Number(process.env.MAX_CYCLES);
             let d;
             try {
-              d = JSON.parse(fs.readFileSync('.fcar-review/decision.json', 'utf8'));
+              d = JSON.parse(fs.readFileSync('.agent-review/decision.json', 'utf8'));
             } catch (e) {
               core.warning(`decision.json ausente ou inválido: ${e.message}`);
               d = null;

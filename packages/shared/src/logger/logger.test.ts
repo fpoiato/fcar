@@ -13,7 +13,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe('Logger', () => {
   it('escreve JSON com campos fixos', () => {
     vi.stubEnv('AWS_LAMBDA_FUNCTION_NAME', 'fcar-health');
-    vi.stubEnv('FCAR_COLOR', 'blue');
+    vi.stubEnv('APP_COLOR', 'blue');
     const { lines, logger } = capture();
     logger.info('ok', { unitId: 'u1' });
     expect(lines[0]).toMatchObject({

@@ -4,14 +4,14 @@ import {
   PutLogEventsCommand,
   ResourceAlreadyExistsException,
 } from '@aws-sdk/client-cloudwatch-logs';
-import { Logger, withHandler } from '@fcar/shared';
+import { Logger, withHandler } from '@app/shared';
 import type { CloudWatchLogsEvent, Context } from 'aws-lambda';
 import { type CentralError, toCentralError } from '../../lib/central-error.js';
 import { decodeLogsEvent } from '../../lib/cloudwatch-logs.js';
 
 /**
  * Recebe, via subscription filter, as linhas suspeitas de erro de todas as Lambdas do projeto
- * e grava somente os erros reais, normalizados, no log group central `/fcar/errors`.
+ * e grava somente os erros reais, normalizados, no log group central `/<slug>/errors`.
  * Este log group não é assinado por ele mesmo (sem recursão): falhas aqui ficam no log
  * próprio do forwarder e no alarme de erros da função.
  */

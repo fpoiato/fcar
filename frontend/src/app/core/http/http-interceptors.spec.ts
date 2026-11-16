@@ -24,13 +24,13 @@ describe('interceptors', () => {
   const report = vi.fn();
   let http: HttpClient;
   let ctrl: HttpTestingController;
-  const api = 'https://api-blue.fcar.fpoiato.com';
+  const api = 'https://api-blue.exemplo.com';
 
   beforeEach(() => {
     report.mockReset();
     TestBed.configureTestingModule({
       providers: [
-        { provide: APP_CONFIG, useValue: buildConfig('blue', 't') },
+        { provide: APP_CONFIG, useValue: buildConfig('blue', 't', 'exemplo.com') },
         { provide: ErrorReporter, useValue: { report } },
         provideHttpClient(withInterceptors([correlationIdInterceptor, errorReportingInterceptor])),
         provideHttpClientTesting(),

@@ -5,6 +5,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
+import { PROJECT, name } from '../config.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const BACKEND_FUNCTIONS_DIR = path.resolve(here, '../../../backend/src/functions');
@@ -12,8 +13,8 @@ export const BACKEND_FUNCTIONS_DIR = path.resolve(here, '../../../backend/src/fu
 export const COLORS = ['blue', 'green'] as const;
 export type Color = (typeof COLORS)[number];
 
-export interface FcarFunctionProps {
-  /** Nome curto; a função se chama `fcar-<name>` e o código fica em backend/src/functions/<name>/handler.ts */
+export interface AppFunctionProps {
+  /** Nome curto; a função se chama `<slug>-<name>` e o código fica em backend/src/functions/<name>/handler.ts */
   name: string;
   environment?: Record<string, string>;
   timeout?: Duration;
@@ -21,7 +22,7 @@ export interface FcarFunctionProps {
   /** Sobrescreve o entry (testes). */
   entry?: string;
   /**
-   * Se os logs desta função devem alimentar o `/fcar/errors` (padrão: true).
+   * Se os logs desta função devem alimentar o `/<slug>/errors` (padrão: true).
    * Só o próprio forwarder do pipeline de erros usa `false`, para não haver recursão.
    */
   forwardErrors?: boolean;
@@ -30,27 +31,27 @@ export interface FcarFunctionProps {
 /**
  * Toda Lambda do projeto nasce deste construct, que garante:
  * - Node 22, ARM64, bundling esbuild, X-Ray
- * - log group próprio `/aws/lambda/fcar-<name>` com retenção definida
+ * - log group próprio `/aws/lambda/<slug>-<name>` com retenção definida
  * - aliases `blue` e `green` (CloudFormation só os cria; quem aponta versões é o deploy, #15)
- * - registro em `FcarFunction.all(scope)`; o `ErrorPipeline` assina os logs de erro de todas
+ * - registro em `AppFunction.all(scope)`; o `ErrorPipeline` assina os logs de erro de todas
  */
-export class FcarFunction extends Construct {
+export class AppFunction extends Construct {
   readonly fn: nodejs.NodejsFunction;
   readonly logGroup: logs.LogGroup;
   readonly aliases: Record<Color, lambda.CfnAlias>;
   readonly functionName: string;
   readonly forwardErrors: boolean;
 
-  private static readonly registry = new WeakMap<Construct, FcarFunction[]>();
+  private static readonly registry = new WeakMap<Construct, AppFunction[]>();
 
-  /** Todas as FcarFunction criadas sob o App da raiz informada. */
-  static all(scope: Construct): FcarFunction[] {
-    return FcarFunction.registry.get(scope.node.root) ?? [];
+  /** Todas as AppFunction criadas sob o App da raiz informada. */
+  static all(scope: Construct): AppFunction[] {
+    return AppFunction.registry.get(scope.node.root) ?? [];
   }
 
-  constructor(scope: Construct, id: string, props: FcarFunctionProps) {
+  constructor(scope: Construct, id: string, props: AppFunctionProps) {
     super(scope, id);
-    this.functionName = `fcar-${props.name}`;
+    this.functionName = name(props.name);
     this.forwardErrors = props.forwardErrors ?? true;
 
     this.logGroup = new logs.LogGroup(this, 'Logs', {
@@ -71,7 +72,8 @@ export class FcarFunction extends Construct {
       logGroup: this.logGroup,
       environment: {
         NODE_OPTIONS: '--enable-source-maps',
-        FCAR_APP_VERSION: scope.node.tryGetContext('fcar:appVersion') ?? 'dev',
+        APP_VERSION: scope.node.tryGetContext('app:appVersion') ?? 'dev',
+        APP_SLUG: PROJECT.slug,
         ...props.environment,
       },
       bundling: {
@@ -93,9 +95,9 @@ export class FcarFunction extends Construct {
       green: this.alias('green'),
     };
 
-    const list = FcarFunction.registry.get(this.node.root) ?? [];
+    const list = AppFunction.registry.get(this.node.root) ?? [];
     list.push(this);
-    FcarFunction.registry.set(this.node.root, list);
+    AppFunction.registry.set(this.node.root, list);
   }
 
   private alias(color: Color): lambda.CfnAlias {

@@ -1,4 +1,4 @@
-import { Logger, withHandler } from '@fcar/shared';
+import { Logger, withHandler } from '@app/shared';
 import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 
 export class HttpError extends Error {
@@ -37,7 +37,7 @@ export type HttpFn = (
 
 /**
  * Handler HTTP padrão: contexto de log, HttpError → resposta controlada (sem log de erro),
- * qualquer outra exceção → log `level=ERROR` (vai para /fcar/errors) e 500 com correlationId.
+ * qualquer outra exceção → log `level=ERROR` (vai para /<slug>/errors) e 500 com correlationId.
  */
 export function httpHandler(service: string, fn: HttpFn) {
   const logger = new Logger(service);
