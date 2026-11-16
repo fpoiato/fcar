@@ -78,8 +78,11 @@ Antes de abrir PR, `npm run lint && npm run typecheck && npm test` precisam pass
 - Erros do navegador (JS, promessas, HTTP 5xx/0, CSP, chunk, `console.error`) são enviados
   automaticamente para `POST /client-errors` (`frontend/src/app/core/errors`). Não engula erros;
   deixe-os chegar ao `ErrorHandler`.
-- Cada cor é um build próprio: `ng build --define "APP_COLOR='green'" --define "APP_VERSION='<sha>'"`.
-  O frontend de uma cor fala com a API da mesma cor (`api-<cor>.fcar.fpoiato.com`).
+- **Um único build** serve às duas cores. Cor, versão, URLs da API e valores públicos vêm de `/config.json`,
+  gerado no deploy para cada cor (`infra/scripts/web-config.mjs`) e lido antes de o app iniciar (`APP_CONFIG`).
+  O frontend de uma cor fala com a API da mesma cor (`api-<cor>.<domínio>`).
+- Valor da AWS que o navegador precisa (ex.: Cognito): a stack publica em SSM `/<slug>/public/<nome>` e ele
+  aparece em `APP_CONFIG.public['<nome>']` no próximo deploy, sem mudar o build. Nunca coloque segredos ali.
 - Nada de script ou handler inline no HTML: o CSP (`script-src 'self'`) bloqueia.
   Por isso `inlineCritical` está desligado no build.
 - Componentes standalone, `OnPush`, prefixo `app-`.

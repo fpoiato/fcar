@@ -56,7 +56,8 @@ export class GithubOidcStack extends Stack {
     deployRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'ActiveColorParameter',
-        actions: ['ssm:GetParameter', 'ssm:PutParameter'],
+        // GetParametersByPath: /<slug>/public → /config.json do frontend.
+        actions: ['ssm:GetParameter', 'ssm:GetParametersByPath', 'ssm:PutParameter'],
         resources: [`arn:aws:ssm:${PROJECT.region}:${PROJECT.account}:parameter/${PROJECT.slug}/*`],
       }),
     );
