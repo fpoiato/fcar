@@ -44,3 +44,13 @@ Registros DNS são criados pelas stacks que os usam (#5, #6), apenas sob `*.fcar
 A cor ativa fica no SSM em `/fcar/active-color` (criado manualmente uma vez, valor inicial `blue`).
 O CDK a recebe por contexto. O script `npm run deploy:backend -w infra` lê o parâmetro e faz o deploy.
 Ver [ADR 0001](../docs/adr/0001-blue-green-backend.md).
+
+## Erros centralizados (`/fcar/errors`)
+
+- Toda `FcarFunction` tem uma subscription filter (`fcar-errors`) com filtro grosso
+  (`ERROR`, `Task timed out`, `Runtime exited`, `Runtime.OutOfMemory`) → `fcar-error-forwarder`.
+- O forwarder grava no `/fcar/errors` **somente** erros reais: linhas JSON `level=ERROR` e falhas de
+  plataforma (timeout, memória, init). "Invoke Error" é descartado (o wrapper já registra a exceção).
+- Formato: `CentralError` em `backend/src/lib/central-error.ts`.
+- Alarmes: `fcar-central-errors-high` (> 20 erros em 5 min) e `fcar-error-forwarder-failing`.
+- O próprio forwarder não é assinado, para não haver recursão.
