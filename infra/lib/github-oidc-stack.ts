@@ -1,7 +1,7 @@
 import { CfnOutput, Duration, Stack, type StackProps } from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import type { Construct } from 'constructs';
-import { FCAR, GITHUB_OIDC_SUB_PREFIXES } from './config.js';
+import { FCAR, GITHUB_OIDC_SUB_PREFIXES, WEB_DISTRIBUTION_IDS } from './config.js';
 
 /**
  * Roles assumidas pelo GitHub Actions via OIDC (sem access keys).
@@ -98,8 +98,15 @@ export class GithubOidcStack extends Stack {
     deployRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'SwapCloudFrontAlias',
-        actions: ['cloudfront:GetDistribution', 'cloudfront:AssociateAlias'],
-        resources: [`arn:aws:cloudfront::${FCAR.account}:distribution/*`],
+        // associate-alias exige também UpdateDistribution na distribuição de destino.
+        actions: [
+          'cloudfront:GetDistribution',
+          'cloudfront:AssociateAlias',
+          'cloudfront:UpdateDistribution',
+        ],
+        resources: Object.values(WEB_DISTRIBUTION_IDS).map(
+          (id) => `arn:aws:cloudfront::${FCAR.account}:distribution/${id}`,
+        ),
       }),
     );
     deployRole.addToPolicy(

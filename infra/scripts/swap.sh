@@ -29,7 +29,11 @@ for attempt in 1 2 3 4 5 6; do
   if aws cloudfront associate-alias --alias "$WEB" --target-distribution-id "$DIST" 2>/tmp/fcar-swap.err; then
     break
   fi
-  if [[ $attempt == 6 ]]; then cat /tmp/fcar-swap.err >&2; exit 1; fi
+  # Só a verificação do TXT justifica nova tentativa; permissão negada e outros erros falham já.
+  if grep -q "AccessDenied" /tmp/fcar-swap.err || [[ $attempt == 6 ]]; then
+    cat /tmp/fcar-swap.err >&2
+    exit 1
+  fi
   echo "  aguardando propagação do TXT (tentativa $attempt)..."; sleep 20
 done
 echo "  web: $WEB -> $DIST"

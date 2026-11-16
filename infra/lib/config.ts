@@ -21,6 +21,12 @@ export const GITHUB_OIDC_SUB_PREFIXES = [
 
 export const env = { account: FCAR.account, region: FCAR.region };
 
+/**
+ * Distribuições CloudFront do frontend (stack fcar-frontend, #5). Fixas para restringir as
+ * permissões da role de deploy sem criar dependência entre stacks.
+ */
+export const WEB_DISTRIBUTION_IDS = { blue: 'E3GC1S5KZJXEU3', green: 'E1ZMKROHY90H2W' } as const;
+
 /** Hosts do projeto. Todos cobertos pelo certificado `fcar.fpoiato.com` + `*.fcar.fpoiato.com`. */
 export const HOSTS = {
   web: FCAR.domain,
