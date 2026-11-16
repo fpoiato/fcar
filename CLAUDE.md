@@ -16,9 +16,17 @@ Vitrine virtual de uma loja de carros em **fcar.fpoiato.com**. Repositório **p�
 
 ## Configuração do projeto
 
-Nome, domínio, zona DNS, conta/região AWS e repositório ficam **só** em `project.config.json`
-(infra, scripts, workflows, prompts e frontend leem dele). Recursos AWS usam o prefixo `slug`
-(`<slug>-backend`, `/<slug>/errors`, `<slug>-web-blue`...). Nunca escreva esses valores no código.
+| O quê                                                                                        | Onde fica                                                   |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Entradas** decididas por humanos: slug, nome, domínio, zona, conta/região AWS, repositório | `project.config.json` (versionado)                          |
+| **Saídas** geradas pela AWS: IDs, ARNs, nomes gerados (distribuições, User Pool, API...)     | SSM `/<slug>/...`, publicadas pela stack que cria o recurso |
+| Saídas que o **navegador** precisa (ex.: User Pool e Client ID do Cognito)                   | SSM `/<slug>/public/...`                                    |
+| **Estado** mutável (cor ativa)                                                               | SSM `/<slug>/active-color`                                  |
+
+- Nunca escreva no código, nem no `project.config.json`, um valor gerado pela AWS.
+- Permissões sobre um recurso são concedidas **pela stack que o cria** (ex.: a stack do frontend concede à role
+  `<slug>-gha-deploy` o que ela precisa nas distribuições). Assim nenhum ID é copiado entre stacks.
+- Recursos AWS usam o prefixo `slug` (`<slug>-backend`, `/<slug>/errors`, `<slug>-web-blue`...).
 
 ## Estrutura
 
