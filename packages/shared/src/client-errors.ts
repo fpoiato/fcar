@@ -41,7 +41,36 @@ export const ClientErrorEvent = z.object({
   csp: z.object({ violatedDirective: text(100), blockedURI: text(300).optional() }).optional(),
 });
 export type ClientErrorEvent = z.infer<typeof ClientErrorEvent>;
-export type ClientErrorEventInput = z.input<typeof ClientErrorEvent>;
+
+export type ClientErrorType = (typeof CLIENT_ERROR_TYPES)[number];
+
+/**
+ * Formato enviado pelo frontend, escrito à mão (sem depender dos tipos do zod no Angular).
+ * A checagem abaixo garante que continua compatível com o schema.
+ */
+export interface ClientErrorEventInput {
+  type: ClientErrorType;
+  message: string;
+  name?: string;
+  stack?: string;
+  url: string;
+  route?: string;
+  timestamp: string;
+  appVersion: string;
+  color?: 'blue' | 'green' | 'local';
+  correlationId?: string;
+  sessionId?: string;
+  userAgent?: string;
+  http?: { method: string; url: string; status: number; correlationId?: string };
+  csp?: { violatedDirective: string; blockedURI?: string };
+}
+
+type Exact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const _schemaMatchesInterface: Exact<
+  z.input<typeof ClientErrorEvent>,
+  ClientErrorEventInput
+> = true;
+void _schemaMatchesInterface;
 
 export const ClientErrorsRequest = z.object({
   events: z.array(ClientErrorEvent).min(1).max(MAX_CLIENT_ERRORS_PER_REQUEST),

@@ -17,6 +17,10 @@ export interface CentralError {
   errorName?: string;
   message: string;
   stack?: string;
+  /** Erros do frontend: página, rota e navegador de onde o erro veio. */
+  page?: string;
+  route?: string;
+  userAgent?: string;
   context?: unknown;
 }
 
@@ -55,7 +59,16 @@ interface JsonLogLine {
   correlationId?: string;
   message?: unknown;
   error?: { name?: string; message?: string; stack?: string };
-  data?: { source?: unknown; [k: string]: unknown };
+  data?: {
+    source?: unknown;
+    appVersion?: string;
+    clientColor?: string;
+    url?: string;
+    route?: string;
+    userAgent?: string;
+    clientCorrelationId?: string;
+    [k: string]: unknown;
+  };
 }
 
 /**
@@ -81,17 +94,23 @@ export function toCentralError(
       line = {};
     }
     if (line.level === 'ERROR') {
+      const frontend = line.data?.source === 'frontend';
+      // Para erros do navegador, versão/cor/correlação relevantes são as do cliente.
+      const d = frontend ? line.data! : undefined;
       return {
         ...base,
         timestamp: line.timestamp ?? new Date(ev.timestamp).toISOString(),
-        source: line.data?.source === 'frontend' ? 'frontend' : 'backend',
+        source: frontend ? 'frontend' : 'backend',
         kind: 'exception',
         function: line.function ?? fn,
-        color: line.color,
+        color: d ? d.clientColor : line.color,
         lambdaVersion: line.version,
-        appVersion: line.appVersion,
+        appVersion: d ? d.appVersion : line.appVersion,
         requestId: line.requestId,
-        correlationId: line.correlationId,
+        correlationId: d?.clientCorrelationId ?? line.correlationId,
+        page: d?.url,
+        route: d?.route,
+        userAgent: d?.userAgent,
         errorName: line.error?.name,
         message: truncate(
           [String(line.message ?? ''), line.error?.message].filter(Boolean).join(': '),

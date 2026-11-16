@@ -20,7 +20,7 @@ Vitrine virtual de uma loja de carros em **fcar.fpoiato.com**. Repositório **p�
 packages/shared   tipos, schemas (zod), logger, utilitários compartilhados
 backend           Lambdas: src/functions/<nome>/handler.ts, src/lib/
 infra             CDK: bin/fcar.ts, lib/<stack>.ts, lib/constructs/
-frontend          Angular + Playwright (a partir da issue #11)
+frontend          Angular 22 (standalone, zoneless) + Playwright (e2e em frontend/e2e)
 docs              decisões e modelos (data-model.md, adr/)
 ```
 
@@ -33,9 +33,10 @@ npm run typecheck
 npm test          unit tests (vitest) de todos os pacotes
 npm run build
 npm run synth     cdk synth
+npm run e2e       Playwright (sobe o ng serve sozinho; PW_CHANNEL=chrome usa o Chrome local)
 ```
 
-Antes de abrir PR, `npm run lint && npm run typecheck && npm test` precisam passar.
+Antes de abrir PR, `npm run lint && npm run typecheck && npm test` precisam passar (e `npm run e2e` se mexer no frontend).
 
 ## Fluxo de trabalho (obrigatório)
 
@@ -57,6 +58,17 @@ Antes de abrir PR, `npm run lint && npm run typecheck && npm test` precisam pass
 - **Toda Lambda** é criada pelo construct `FcarFunction` (garante log group, aliases blue/green e o envio de erros ao `/fcar/errors`).
 - Erros: deixe exceções inesperadas propagarem até o wrapper do handler (ele loga `level=ERROR`). Não engula erros.
 - Não logue dados pessoais (email, telefone, CPF, tokens). O logger tem redação, mas não dependa só dela.
+
+## Frontend
+
+- Erros do navegador (JS, promessas, HTTP 5xx/0, CSP, chunk, `console.error`) são enviados
+  automaticamente para `POST /client-errors` (`frontend/src/app/core/errors`). Não engula erros;
+  deixe-os chegar ao `ErrorHandler`.
+- Cada cor é um build próprio: `ng build --define "FCAR_COLOR='green'" --define "FCAR_APP_VERSION='<sha>'"`.
+  O frontend de uma cor fala com a API da mesma cor (`api-<cor>.fcar.fpoiato.com`).
+- Nada de script ou handler inline no HTML: o CSP (`script-src 'self'`) bloqueia.
+  Por isso `inlineCritical` está desligado no build.
+- Componentes standalone, `OnPush`, prefixo `fcar-`.
 
 ## DynamoDB — retrocompatibilidade (regra dura)
 
