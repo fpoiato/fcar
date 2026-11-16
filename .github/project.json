@@ -1,0 +1,14 @@
+{
+  "projectId": "PVT_kwHOAbY0Ns4Brxwq",
+  "statusFieldId": "PVTSSF_lAHOAbY0Ns4BrxwqzhqC1uI",
+  "statusOptions": {
+    "Triage": "70ff7f94",
+    "Backlog": "8195b44f",
+    "Todo": "98756b9e",
+    "In Progress": "9e359233",
+    "Review": "99eddc88",
+    "Rework": "40375f03",
+    "Needs Human": "f4102de9",
+    "Done": "9950519a"
+  }
+}
