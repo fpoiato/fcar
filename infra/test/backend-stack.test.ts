@@ -40,7 +40,11 @@ describe('BackendStack', () => {
 
   it('toda Lambda tem log group próprio e aliases blue/green', () => {
     const fns = FcarFunction.all(app);
-    expect(fns.map((f) => f.functionName).sort()).toEqual(['fcar-health', 'fcar-ws-connection']);
+    expect(fns.map((f) => f.functionName).sort()).toEqual([
+      'fcar-error-forwarder',
+      'fcar-health',
+      'fcar-ws-connection',
+    ]);
     for (const f of fns) {
       t.hasResourceProperties('AWS::Logs::LogGroup', {
         LogGroupName: `/aws/lambda/${f.functionName}`,
@@ -49,12 +53,12 @@ describe('BackendStack', () => {
     t.resourcePropertiesCountIs(
       'AWS::Lambda::Alias',
       { Name: 'blue', FunctionVersion: '$LATEST' },
-      2,
+      3,
     );
     t.resourcePropertiesCountIs(
       'AWS::Lambda::Alias',
       { Name: 'green', FunctionVersion: '$LATEST' },
-      2,
+      3,
     );
   });
 

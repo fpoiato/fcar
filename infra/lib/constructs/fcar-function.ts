@@ -20,6 +20,11 @@ export interface FcarFunctionProps {
   memorySize?: number;
   /** Sobrescreve o entry (testes). */
   entry?: string;
+  /**
+   * Se os logs desta função devem alimentar o `/fcar/errors` (padrão: true).
+   * Só o próprio forwarder do pipeline de erros usa `false`, para não haver recursão.
+   */
+  forwardErrors?: boolean;
 }
 
 /**
@@ -27,13 +32,14 @@ export interface FcarFunctionProps {
  * - Node 22, ARM64, bundling esbuild, X-Ray
  * - log group próprio `/aws/lambda/fcar-<name>` com retenção definida
  * - aliases `blue` e `green` (CloudFormation só os cria; quem aponta versões é o deploy, #15)
- * - registro em `FcarFunction.all(scope)` para que o observability (#8) assine os logs de erro
+ * - registro em `FcarFunction.all(scope)`; o `ErrorPipeline` assina os logs de erro de todas
  */
 export class FcarFunction extends Construct {
   readonly fn: nodejs.NodejsFunction;
   readonly logGroup: logs.LogGroup;
   readonly aliases: Record<Color, lambda.CfnAlias>;
   readonly functionName: string;
+  readonly forwardErrors: boolean;
 
   private static readonly registry = new WeakMap<Construct, FcarFunction[]>();
 
@@ -45,6 +51,7 @@ export class FcarFunction extends Construct {
   constructor(scope: Construct, id: string, props: FcarFunctionProps) {
     super(scope, id);
     this.functionName = `fcar-${props.name}`;
+    this.forwardErrors = props.forwardErrors ?? true;
 
     this.logGroup = new logs.LogGroup(this, 'Logs', {
       logGroupName: `/aws/lambda/${this.functionName}`,

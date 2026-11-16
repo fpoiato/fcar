@@ -10,6 +10,7 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import type { Construct } from 'constructs';
 import { FCAR, HOSTS } from './config.js';
+import { ErrorPipeline } from './constructs/error-pipeline.js';
 import { COLORS, type Color, FcarFunction } from './constructs/fcar-function.js';
 
 export interface BackendStackProps extends StackProps {
@@ -240,6 +241,11 @@ export class BackendStack extends Stack {
       }),
     );
 
+    // ---------- Observabilidade ----------
+    // Sempre por último: assina os logs de todas as Lambdas criadas acima.
+    const errors = new ErrorPipeline(this, 'ErrorPipeline');
+
+    new CfnOutput(this, 'CentralErrorsLogGroup', { value: errors.logGroup.logGroupName });
     new CfnOutput(this, 'RestApiId', { value: this.restApi.restApiId });
     new CfnOutput(this, 'WsApiId', { value: wsApi.ref });
     new CfnOutput(this, 'ActiveColor', { value: props.activeColor });
